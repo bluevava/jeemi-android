@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import unittest
 import zipfile
-from unittest.mock import patch
+from unittest.mock import Mock, call, patch
 
 from scripts import dev
 from scripts.release import common, signing, workflow
@@ -156,15 +156,23 @@ class BundleTests(TemporaryTests):
 
 class FakeGitHub:
     def __init__(self, state=None, commit=None):
-        self.state = state
+        self.state = {"id": 1, "tag_name": METADATA["tag"], **state} if state is not None else None
         self.commit = commit
         self.writes = []
+        self.reads = []
 
     def request(self, path, *, method="GET", data=None, missing=False):
         if method != "GET":
             self.writes.append((path, method, data))
+        else:
+            self.reads.append(path)
         if path.startswith("/releases/tags/"):
-            return self.state
+            # GitHub's tag endpoint only returns published releases, not drafts.
+            return self.state if self.state and not self.state["draft"] else None
+        if path == "/releases?per_page=100&page=1":
+            return [self.state] if self.state else []
+        if path == "/releases/1" and method == "GET":
+            return self.state if self.state and self.state["id"] == 1 else None
         if path.startswith("/git/ref/tags/"):
             return {"object": {"type": "commit", "sha": self.commit}} if self.commit else None
         if path == "/git/refs" and method == "POST":
@@ -180,6 +188,26 @@ class FakeGitHub:
 
 
 class PublicationTests(TemporaryTests):
+    def test_release_lookup_finds_draft_missing_from_tag_endpoint(self):
+        api = FakeGitHub({"draft": True, "assets": []}, COMMIT)
+        self.assertEqual(workflow.release_state(api, METADATA["tag"]), api.state)
+        self.assertIn("/releases?per_page=100&page=1", api.reads)
+
+    def test_release_lookup_paginates_when_draft_is_on_a_later_page(self):
+        draft = {"id": 101, "tag_name": METADATA["tag"], "draft": True}
+        api = Mock()
+        api.request.side_effect = [None, [{"tag_name": f"v0.0.{index}"} for index in range(100)], [draft]]
+        self.assertEqual(workflow.release_state(api, METADATA["tag"]), draft)
+        self.assertEqual(api.request.call_args_list, [call("/releases/tags/v1.2.3", missing=True),
+            call("/releases?per_page=100&page=1"), call("/releases?per_page=100&page=2")])
+
+    def test_release_lookup_limit_cannot_be_treated_as_missing_draft(self):
+        api = Mock()
+        api.request.side_effect = [None] + [[{"tag_name": "v0.0.1"}] * 100] * 100
+        with self.assertRaisesRegex(ValueError, "exceeded 100 pages"):
+            workflow.release_state(api, METADATA["tag"])
+        self.assertEqual(api.request.call_count, 101)
+
     def test_published_version_is_skipped_and_existing_tag_never_moves(self):
         api = FakeGitHub({"draft": False}, COMMIT)
         self.assertFalse(workflow.check_state(api, METADATA["tag"], "c" * 40))
@@ -212,6 +240,7 @@ class PublicationTests(TemporaryTests):
         self.publish_with(api, upload)
         self.assertFalse(api.state["draft"])
         self.assertEqual(api.writes[-1][1], "PATCH")
+        self.assertIn("/releases/1", api.reads)
         for failure in ("missing", "digest", "upload"):
             api = FakeGitHub()
             def broken(command, **kwargs):
@@ -225,6 +254,37 @@ class PublicationTests(TemporaryTests):
             with self.subTest(failure=failure), self.assertRaises((ValueError, subprocess.CalledProcessError)):
                 self.publish_with(api, broken)
             self.assertTrue(api.state["draft"])
+            self.assertFalse(any(method == "PATCH" for _, method, _ in api.writes))
+
+    def test_existing_draft_is_resumed_without_creating_another_release(self):
+        self.bundle()
+        api = FakeGitHub({"draft": True, "assets": []}, COMMIT)
+        def upload(command, **kwargs):
+            api.state["assets"] = [{"name": path.name, "size": path.stat().st_size, "state": "uploaded",
+                                     "digest": "sha256:" + common.digest(path)} for path in self.directory.iterdir()]
+        self.publish_with(api, upload)
+        self.assertFalse(api.state["draft"])
+        self.assertEqual(api.writes, [("/releases/1", "PATCH", {"body": "Notes\n", "draft": False, "make_latest": "true"})])
+
+    def test_publication_stops_if_uploaded_draft_identity_or_tag_changes(self):
+        self.bundle()
+        for change in ("deleted", "replacement", "retagged", "published", "commit"):
+            api = FakeGitHub({"draft": True, "assets": []}, COMMIT)
+            def upload(command, **kwargs):
+                api.state["assets"] = [{"name": path.name, "size": path.stat().st_size, "state": "uploaded",
+                                         "digest": "sha256:" + common.digest(path)} for path in self.directory.iterdir()]
+                if change == "deleted":
+                    api.state = None
+                elif change == "replacement":
+                    api.state = {**api.state, "id": 2}
+                elif change == "retagged":
+                    api.state["tag_name"] = "v9.9.9"
+                elif change == "published":
+                    api.state["draft"] = False
+                else:
+                    api.commit = "c" * 40
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                self.publish_with(api, upload)
             self.assertFalse(any(method == "PATCH" for _, method, _ in api.writes))
 
     def test_invalid_bundle_or_published_release_does_not_mutate_remote(self):

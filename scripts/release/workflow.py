@@ -45,7 +45,19 @@ class GitHub:
 
 
 def release_state(api, tag):
-    return api.request("/releases/tags/" + urllib.parse.quote(tag, safe=""), missing=True)
+    state = api.request("/releases/tags/" + urllib.parse.quote(tag, safe=""), missing=True)
+    if state is not None:
+        return state
+    # The tag endpoint excludes drafts. Authenticated release listings include
+    # them, so a retry can resume the existing draft instead of creating another.
+    for page in range(1, 101):
+        releases = api.request(f"/releases?per_page=100&page={page}")
+        for state in releases:
+            if state.get("tag_name") == tag:
+                return state
+        if len(releases) < 100:
+            return None
+    raise ValueError("Release lookup exceeded 100 pages; refusing to assume this version has no draft.")
 
 
 def tag_commit(api, tag):
@@ -165,6 +177,7 @@ def publish(directory: Path) -> None:
     if not state["draft"]:
         print("This version was already published; assets were not changed.")
         return
+    release_id = state["id"]
     files = sorted(path for path in directory.iterdir() if path.is_file())
     names = {path.name for path in files}
     if {asset["name"] for asset in state.get("assets", [])} - names:
@@ -172,9 +185,15 @@ def publish(directory: Path) -> None:
     # Only the publishing step receives GH_TOKEN; unsigned builds and PR checks do not.
     subprocess.run(["gh", "release", "upload", tag, *[str(path.resolve()) for path in files],
                     "--repo", PUBLIC_REPOSITORY, "--clobber"], check=True)
-    state = release_state(api, tag)
-    if state is None or not state["draft"] or tag_commit(api, tag) != commit:
-        raise ValueError("Release state changed while uploading; publication was stopped.")
+    # Re-read the same draft by its ID. A tag lookup cannot see this draft, and
+    # searching again could select a replacement created during the upload.
+    state = api.request("/releases/" + str(release_id), missing=True)
+    if state is None or state.get("id") != release_id or state.get("tag_name") != tag:
+        raise ValueError("The release draft was removed or replaced during upload; publication was stopped.")
+    if not state["draft"]:
+        raise ValueError("The release was published during upload; no further changes were made.")
+    if tag_commit(api, tag) != commit:
+        raise ValueError("The version tag changed during upload; publication was stopped.")
     uploaded = {asset["name"]: asset for asset in state.get("assets", [])}
     if set(uploaded) != names:
         raise ValueError("Draft upload is incomplete; the draft was retained for retry.")

@@ -56,6 +56,8 @@ Release 禁用 APK 内嵌 Git 元数据，源码提交由 CI 记录在 `release.
 
 发布任务再次核对下载的六件资产、两种 APK 的证书与包信息，创建或续传草稿，确认 GitHub 返回的各资产大小和 SHA-256 后才公开。中途失败保留草稿，可重新运行失败工作流；不要移动既有版本标签。正式发布仅允许在 `bluevava/jeemi-android` 执行，fork 自行发布时需要明确调整仓库常量及工作流限制。
 
+草稿通过已认证的 Releases 列表查找，上传后按固定 Release ID 重新校验；按标签查询的 API 只返回已发布版本。历史工作流若在签名成功后报 `Release state changed while uploading`，需检查是否仍在使用旧的草稿查询脚本。重新运行旧任务仍使用旧提交；脚本更新后，后续版本按正常流程递增版本号并发布，已有标签保持不变。
+
 可用 `apksigner verify --verbose --print-certs <APK>` 查看证书指纹，并与 `release.json` 的 `certificateSha256` 对比；文件哈希用 `sha256sum -c SHA256SUMS` 或 PowerShell `Get-FileHash -Algorithm SHA256` 校验。
 
 参考：[Android 应用签名](https://developer.android.com/studio/publish/app-signing)、[apksigner](https://developer.android.com/tools/apksigner)、[GitHub Actions Secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)。
