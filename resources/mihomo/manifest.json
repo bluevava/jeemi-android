@@ -1,0 +1,29 @@
+{
+  "version": "v1.19.30-jeemi.2",
+  "releaseUrl": "https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.30",
+  "sourceUrl": "https://github.com/MetaCubeX/mihomo/tree/v1.19.30",
+  "license": "GPL-3.0",
+  "cores": [
+    {
+      "abi": "arm64-v8a",
+      "architecture": "arm64",
+      "sha256": "4e992e75dc97ad7fd6da910404d3d3d699ff08228e1ae6fbea234d2d1ba2b91c",
+      "bytes": 52547448
+    },
+    {
+      "abi": "x86_64",
+      "architecture": "amd64",
+      "sha256": "b117630cfc60f51de18191732932601d88ca2bec0037838122191f5748678210",
+      "bytes": 57108696
+    }
+  ],
+  "upstreamVersion": "v1.19.30",
+  "variant": "jeemi-vpn-fd-android-owner",
+  "sourceLock": "source.json",
+  "patch": "vpn-fd-patch.json",
+  "go": "1.26.5",
+  "ndk": "27.2.12479018",
+  "androidApi": 26,
+  "sourceLockSha256": "c834035cf7420ebb757fa04f04c1e2b5a01ce9dcd83caf6f91bbfd145da254a5",
+  "patchSha256": "8780b6917f7c938ff617e7fe056469a2831f57ecd9b19f1418814ef7a7019e65"
+}

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="runtime_append_unique">追加去重</string>
+    <string name="runtime_enable_resource">注入%1$s</string>
+    <string name="runtime_add_preset">添加预设</string>
+    <string name="runtime_route_exclude">排除网段</string>
+    <string name="runtime_yaml_error">YAML 配置无效</string>
+    <string name="runtime_yaml_error_line">%1$s：请检查第 %2$d 行。已保留草稿，尚未保存。</string>
+    <string name="runtime_yaml_error_field">%1$s：请检查 YAML 结构和允许的值。已保留草稿，尚未保存。</string>
+    <string name="runtime_continue_editing">继续编辑</string>
+    <string name="runtime_revert_field">还原此字段</string>
+    <string name="runtime_forced_help">此项在订阅及其关联的本地配置或脚本之后，由主页始终覆盖注入。开关设置的是字段值，包括 false，不是是否注入。保存会更新候选，正在运行的会话需要重启才生效。</string>
+    <string name="runtime_list_help">关闭时保留组合来源的字段。开启后使用此 YAML 列表：追加去重保留来源在前，并在末尾加入不重复的新项；完全覆盖替换整个列表，空列表可清空来源。恢复默认只修改当前草稿内容。保存需要有效 YAML，不会自动重启代理。</string>
+    <string name="runtime_nameserver_help">默认开启，内容为 114.114.114.114 和 223.5.5.5，策略为追加去重。关闭时保留组合来源。追加去重保留来源在前，并在末尾加入不重复的新项；完全覆盖替换整个列表。此项至少需要一个解析服务器。恢复默认只修改当前草稿内容。</string>
+    <string name="runtime_mapping_help">关闭时保留组合来源。开启并选择追加去重时按键合并：同名键使用主页的完整值，包括列表值；完全覆盖替换整个映射，空映射可清空来源。启用 hosts 同时注入 dns.use-hosts=true，关闭则保留来源的这两个字段。恢复默认只修改当前草稿内容。</string>
+    <string name="runtime_lan_help">桌面默认包含 18 条 DIRECT 规则。主页将此 YAML 列表放在最终规则最前面，移除完全重复的项，保留其他来源规则的顺序。仅接受 DIRECT 规则，空列表表示不追加前缀。此项没有注入开关或完全覆盖策略。</string>
+    <string name="runtime_route_purpose">将 IPv4 或 IPv6 CIDR 网段排除在 Android VPN 路由之外。关闭时保留来源排除项；开启后按所选策略注入。</string>
+    <string name="runtime_route_scenarios">适用于某个网段需要完全绕过 VPN 的情况。它和仍在 mihomo 内处理连接的 DIRECT 规则不同。桌面默认关闭、空列表、追加去重。</string>
+    <string name="runtime_route_cautions">VPN 接口和路由由 Android 管理。Android 13 及以上使用排除路由，Android 8–12 使用等效的包含路由，最多 2,048 条；过于复杂的路由会在建立 VPN 前报错。私有 DNS 地址 172.19.0.2 始终保留 VPN 可达路由。修改后需重启，桌面的自动路由和自动检测网卡开关不适用。</string>
+</resources>

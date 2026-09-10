@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connection_app_target">应用/目标</string>
+    <string name="connection_match_outbound">命中/出口</string>
+    <string name="connection_speed">速度</string>
+    <string name="connection_actions">操作</string>
+    <string name="connection_sort">连接排序</string>
+    <string name="connection_application">发起应用</string>
+    <string name="connection_unknown_application">未识别应用</string>
+    <string name="connection_actual_outbound">实际出口</string>
+    <string name="connection_upload_speed">上传速度</string>
+    <string name="connection_download_speed">下载速度</string>
+    <string name="connection_close_target">关闭到%1$s的连接</string>
+    <string name="connection_details_target">查看%1$s的连接详情</string>
+</resources>

@@ -1,0 +1,15 @@
+Jeemi Android bundled mihomo v1.19.30-jeemi.1
+Upstream: https://github.com/MetaCubeX/mihomo/tree/v1.19.30
+Source archive: https://codeload.github.com/MetaCubeX/mihomo/tar.gz/refs/tags/v1.19.30
+License: GNU General Public License version 3 (LICENSE.txt).
+
+Modified by Jeemi Android, 2026-09-09:
+When VpnService provides an established TUN descriptor, skip Android CLI
+package-list routing setup. Android VpnService owns application routing.
+Exact patch: mihomo-vpn-fd-patch.json.
+Source archive digest: mihomo-source.json.
+Binary, toolchain and patch digests: mihomo.json.
+Repository sources: resources/mihomo/source/ and scripts/mihomo_build.py,
+with scripts/dev.py and scripts/toolchain.json.
+Build: Go 1.26.5, Android NDK 27.2.12479018, API 26, with_gvisor.
+The remaining mihomo source is unchanged from the pinned upstream archive.

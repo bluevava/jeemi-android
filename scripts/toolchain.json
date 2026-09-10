@@ -1,0 +1,14 @@
+{
+  "minSdk": 26,
+  "java": "21.0.10",
+  "python": "3.12.10",
+  "compileSdk": 36,
+  "targetSdk": 36,
+  "buildTools": "36.0.0",
+  "ndk": "27.2.12479018",
+  "go": "1.26.5",
+  "gomobile": "v0.0.0-20260908204917-8b95e45f8d3e",
+  "abis": ["arm64-v8a", "x86_64"],
+  "gradle": "8.14.3",
+  "gradleSha256": "bd71102213493060956ec229d946beee57158dbd89d0e62b91bca0fa2c5f3531"
+}

@@ -1,0 +1,28 @@
+name: Android 源码检查
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: 脚本、UI、Go、Kotlin 与 Lint
+        run: python scripts/dev.py check
+      - name: 构建并验证 ARM64 与 x86_64 Debug APK
+        run: python scripts/dev.py build-debug

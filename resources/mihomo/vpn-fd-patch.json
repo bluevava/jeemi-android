@@ -1,0 +1,27 @@
+{
+  "patches": [
+    {
+      "file": "listener/sing_tun/server_android.go",
+      "before": "func (l *Listener) buildAndroidRules(tunOptions *tun.Options) error {\n",
+      "after": "func (l *Listener) buildAndroidRules(tunOptions *tun.Options) error {\n\t// Jeemi: VpnService already applied app routing before passing this FD.\n\t// Unprivileged apps cannot read /data/system/packages.xml.\n\tif tunOptions.FileDescriptor > 0 {\n\t\treturn nil\n\t}\n"
+    },
+    {
+      "file": "tunnel/tunnel.go",
+      "before": "if !features.CMFA {",
+      "after": "if !features.CMFA && !process.PlatformPackageResolver {"
+    },
+    {
+      "file": "component/process/process.go",
+      "before": "var DefaultPackageNameResolver PackageNameResolver",
+      "after": "var DefaultPackageNameResolver PackageNameResolver\n\n// PlatformPackageResolver is set only when Android supplies complete tuple ownership.\nvar PlatformPackageResolver bool"
+    },
+    {
+      "file": "listener/sing_tun/server_android.go",
+      "before": "if !features.CMFA {",
+      "after": "if !features.CMFA && process.DefaultPackageNameResolver == nil {"
+    }
+  ],
+  "files": {
+    "component/process/process_jeemi_android.go": "//go:build android\n\npackage process\n\nimport (\n \"encoding/json\"\n \"fmt\"\n \"io\"\n \"net/http\"\n \"net\"\n \"net/url\"\n \"os\"\n \"strconv\"\n \"time\"\n C \"github.com/metacubex/mihomo/constant\"\n)\n\n// Jeemi supplies an authenticated, session-scoped Android connection owner\n// resolver. No app inventory or traffic metadata is written to disk.\nfunc init() {\n address, token := os.Getenv(\"JEEMI_ANDROID_OWNER\"), os.Getenv(\"JEEMI_ANDROID_TOKEN\")\n if host, _, err := net.SplitHostPort(address); err != nil || host != \"127.0.0.1\" || len(token) < 32 { return }\n PlatformPackageResolver = true\n client := &http.Client{Timeout: 800*time.Millisecond, Transport: &http.Transport{Proxy:nil, MaxIdleConnsPerHost:8}, CheckRedirect:func(*http.Request,[]*http.Request) error{return http.ErrUseLastResponse}}\n DefaultPackageNameResolver = func(metadata *C.Metadata) (string,error) {\n  q := url.Values{\"network\":{metadata.NetWork.String()},\"source\":{metadata.SrcIP.String()},\"destination\":{metadata.DstIP.String()},\"sourcePort\":{strconv.Itoa(int(metadata.SrcPort))},\"destinationPort\":{strconv.Itoa(int(metadata.DstPort))}}\n  if metadata.RawDstAddr != nil { if host,port,err := net.SplitHostPort(metadata.RawDstAddr.String()); err == nil { q.Set(\"destination\",host);q.Set(\"destinationPort\",port) } }\n  request,err := http.NewRequest(http.MethodGet,\"http://\"+address+\"/owner?\"+q.Encode(),nil)\n  if err != nil { return \"\",ErrNotFound }\n  request.Header.Set(\"Authorization\",\"Bearer \"+token)\n  response,err := client.Do(request)\n  if err != nil { return \"\",ErrNotFound }\n  defer response.Body.Close()\n  if response.StatusCode != 200 { return \"\",ErrNotFound }\n  var result struct { UID int64 `json:\"uid\"`; Package string `json:\"package\"` }\n  if json.NewDecoder(io.LimitReader(response.Body,4096)).Decode(&result) != nil || result.UID < 0 { return \"\",ErrNotFound }\n  metadata.Uid = uint32(result.UID)\n  if result.Package == \"\" { return \"\",fmt.Errorf(\"package unavailable\") }\n  metadata.ProcessPath = \"\"\n  return result.Package,nil\n }\n}\n"
+  }
+}

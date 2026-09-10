@@ -1,0 +1,26 @@
+{
+  "version": "v1.19.30",
+  "releaseUrl": "https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.30",
+  "sourceUrl": "https://github.com/MetaCubeX/mihomo/tree/v1.19.30",
+  "license": "GPL-3.0",
+  "cores": [
+    {
+      "abi": "arm64-v8a",
+      "architecture": "arm64",
+      "asset": "mihomo-android-arm64-v8-v1.19.30.gz",
+      "url": "https://github.com/MetaCubeX/mihomo/releases/download/v1.19.30/mihomo-android-arm64-v8-v1.19.30.gz",
+      "archiveSha256": "19afeb40fca190fc2e3906a4e3b87c74a0c2120626fd3cb3ae0cf4092cb780ad",
+      "sha256": "94344144936968f25e7089bbeac2d87f3caf67574ba433511424724ad7435dad",
+      "bytes": 52586488
+    },
+    {
+      "abi": "x86_64",
+      "architecture": "amd64",
+      "asset": "mihomo-android-amd64-v1.19.30.gz",
+      "url": "https://github.com/MetaCubeX/mihomo/releases/download/v1.19.30/mihomo-android-amd64-v1.19.30.gz",
+      "archiveSha256": "33aa898cb17b442531abbb9f7567e0e4a8e0542ee2f72f042b1a805f0b6ab1fe",
+      "sha256": "07f38978fae8067d110acdd78a02af6d37ef8b8719ef67d4f9c0d6c22b9e7781",
+      "bytes": 57134096
+    }
+  ]
+}

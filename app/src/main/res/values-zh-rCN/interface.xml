@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language">语言</string>
+    <string name="language_chinese">简体中文</string>
+    <string name="language_english">English</string>
+    <string name="status_control">状态控制</string>
+    <string name="core_check">检查</string>
+    <string name="core_checking">检查中</string>
+    <string name="core_check_failed">检查失败</string>
+    <string name="core_verified">可执行性已验证</string>
+    <string name="core_not_checked">本机尚未检查</string>
+    <string name="runtime_stopped">已停止</string>
+    <string name="runtime_starting">启动中</string>
+    <string name="runtime_running">运行中</string>
+    <string name="runtime_failed">服务异常</string>
+    <string name="no_resources">暂无本地资源</string>
+    <string name="tools_deferred">暂未开放</string>
+    <string name="subscription_count">%1$d / 50 份订阅</string>
+    <string name="default_group_name">本地策略组</string>
+    <string name="log_silent">静默</string>
+    <string name="log_error">错误</string>
+    <string name="log_warning">警告</string>
+    <string name="log_info">信息</string>
+    <string name="log_debug">调试</string>
+    <string name="dns_fake_ip">虚拟地址</string>
+    <string name="dns_redir_host">真实地址</string>
+    <string name="cache_lru">最近最少使用（LRU）</string>
+    <string name="cache_arc">自适应替换（ARC）</string>
+</resources>

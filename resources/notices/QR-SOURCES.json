@@ -1,0 +1,29 @@
+{
+  "components": [
+    {
+      "module": "com.journeyapps:zxing-android-embedded",
+      "version": "4.3.0"
+    },
+    {
+      "module": "com.google.zxing:core",
+      "version": "3.4.1"
+    }
+  ],
+  "licenses": [
+    {
+      "file": "ZXING-EMBEDDED-LICENSE.txt",
+      "source": "https://raw.githubusercontent.com/journeyapps/zxing-android-embedded/v4.3.0/COPYING",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "file": "ZXING-CORE-LICENSE.txt",
+      "source": "https://raw.githubusercontent.com/zxing/zxing/zxing-3.4.1/LICENSE",
+      "sha256": "3f62881f0566227a24b12e5a754cc79f39aaa94883038e95c94812e1f50af42f"
+    },
+    {
+      "file": "ZXING-CORE-NOTICE.txt",
+      "source": "https://raw.githubusercontent.com/zxing/zxing/zxing-3.4.1/NOTICE",
+      "sha256": "4db4b60aace29ec6c5c4f13ca9cac1930d3c0c54bcc67dceead0c10771120e66"
+    }
+  ]
+}

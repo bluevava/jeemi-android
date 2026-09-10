@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connection_app_target">App/Target</string>
+    <string name="connection_match_outbound">Rule/Exit</string>
+    <string name="connection_speed">Speed</string>
+    <string name="connection_actions">Actions</string>
+    <string name="connection_sort">Sort connections</string>
+    <string name="connection_application">Application</string>
+    <string name="connection_unknown_application">Unknown app</string>
+    <string name="connection_actual_outbound">Actual outbound</string>
+    <string name="connection_upload_speed">Upload speed</string>
+    <string name="connection_download_speed">Download speed</string>
+    <string name="connection_close_target">Close connection to %1$s</string>
+    <string name="connection_details_target">Connection details for %1$s</string>
+</resources>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language">Language</string>
+    <string name="language_chinese">简体中文</string>
+    <string name="language_english">English</string>
+    <string name="status_control">Status control</string>
+    <string name="core_check">Check</string>
+    <string name="core_checking">Checking</string>
+    <string name="core_check_failed">Check failed</string>
+    <string name="core_verified">Executable verified</string>
+    <string name="core_not_checked">Not checked on this device</string>
+    <string name="runtime_stopped">Stopped</string>
+    <string name="runtime_starting">Starting</string>
+    <string name="runtime_running">Running</string>
+    <string name="runtime_failed">Service error</string>
+    <string name="no_resources">No local resources</string>
+    <string name="tools_deferred">Not available yet</string>
+    <string name="subscription_count">%1$d / 50 subscriptions</string>
+    <string name="default_group_name">Local group</string>
+    <string name="log_silent">Silent</string>
+    <string name="log_error">Error</string>
+    <string name="log_warning">Warning</string>
+    <string name="log_info">Info</string>
+    <string name="log_debug">Debug</string>
+    <string name="dns_fake_ip">Fake IP</string>
+    <string name="dns_redir_host">Real IP</string>
+    <string name="cache_lru">Least recently used (LRU)</string>
+    <string name="cache_arc">Adaptive replacement (ARC)</string>
+</resources>

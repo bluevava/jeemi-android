@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application android:usesCleartextTraffic="true">
+        <!-- Separate APK UID: its traffic must cross VPN, unlike the excluded core UID. -->
+        <activity android:name="io.jeemi.android.testprobe.TrafficProbeActivity" android:exported="true" />
+    </application>
+</manifest>

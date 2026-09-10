@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="help_connection_purpose">The Home switch starts and stops VPN. The start or refresh icon at the top of every page starts VPN or restarts it with saved settings. Tap the subscription header to open Subscriptions; an empty library opens the import form.</string>
+    <string name="help_connection_scenarios">Grant system VPN consent on first start. The first control chooses Rule, Global or Direct routing; the second chooses system, gVisor or mixed, with gVisor as the default. Restart from the top bar to apply saved routing, stack or runtime changes.</string>
+    <string name="help_connection_cautions">Running appears only after the core confirms TUN is ready. Restart closes the old tunnel first and interrupts active connections; unsaved drafts are not applied. Notification refusal does not block an authorized VPN. App traffic bypasses VPN to prevent a routing loop.</string>
+    <string name="help_core_purpose">View the mihomo version and architecture included in this package.</string>
+    <string name="help_core_scenarios">The manual Check button runs only the version command to diagnose installation or architecture issues.</string>
+    <string name="help_core_cautions">Android runs the installed executable. Update the app package to update the core. Normal startup does not repeat the version check.</string>
+    <string name="help_runtime_purpose">Inject Home runtime preferences as the final layer after subscription and local processing.</string>
+    <string name="help_runtime_scenarios">Basic and DNS scalar values always override the composed source, including false. Optional resources use an injection switch and Append unique / Override segments. Mapping append merges by key, with the whole Home value winning for a duplicate key.</string>
+    <string name="help_runtime_cautions">Disabling an optional resource preserves its source value rather than writing false or an empty list. Saving keeps the source document and current session unchanged.</string>
+    <string name="help_nodes_purpose">Show selectors from the composed candidate and live nodes and latency from the matching session.</string>
+    <string name="help_nodes_scenarios">The collapsed subscription panel shows expiry date, usage and time since refresh. Expand it to select a highlighted subscription card, refresh it, or link a local config or script. Tap the panel header to collapse it. Selectors show their chosen node on the right. Use the lower toolbar to test, search, show hidden groups or configure unmatched traffic. Search keeps node selection and latency tests available. Tap a latency badge to test that node; green is up to 200ms, yellow up to 500ms, red is slower or failed. Individual tests pause during batch testing.</string>
+    <string name="help_nodes_cautions">Search node names using | for OR, &amp; for AND and ! to exclude. Full-width ｜ ＆ ！ from mobile keyboards work the same way. Apply OR first, then all AND terms, then exclusions. For example, hk | jp &amp; gm !ev requires hk or jp, also gm, and excludes ev. Matching ignores case and whitespace around each term, including full-width spaces; internal spaces remain literal. Selector names, protocols and provider names are not searched. Batch tests use only the results; no matches never falls back to all nodes. Without a matching active session, manual selectors save a preferred node for the next start. Members loaded only from remote providers become available after startup. Automatic groups still select their own nodes. Latency tests require a matching active session; old session data is never presented as a new result.</string>
+    <string name="help_providers_purpose">Manage rule providers from the composed candidate, including disabled entries.</string>
+    <string name="help_providers_scenarios">Disable a provider and its referencing rules, or refresh an HTTP provider in the matching running session.</string>
+    <string name="help_providers_cautions">Enable states are saved per subscription and applied before unmatched-traffic and Home overrides. Restart the active session after changes.</string>
+    <string name="help_association_purpose">Choose one local configuration or script handler for a subscription.</string>
+    <string name="help_association_scenarios">Reuse a handler across subscriptions. Local routing plans reference strategy groups and rule sets.</string>
+    <string name="help_association_cautions">Configuration and script are mutually exclusive. All affected candidates are validated before saving; original documents are retained. Legacy attachments remain compatible.</string>
+    <string name="help_preview_purpose">Read the candidate produced by the current configuration or script operation.</string>
+    <string name="help_preview_scenarios">Inspect the complete saved subscription composition, or test a resource draft before saving it.</string>
+    <string name="help_preview_cautions">This view shows a composed candidate. Reference checks do not replace device connection tests. Exports contain the full configuration and may contain credentials.</string>
+    <string name="help_document_purpose">Read the stored original or normalized subscription document.</string>
+    <string name="help_document_scenarios">Compare imported content with its mihomo representation when diagnosing conversion issues.</string>
+    <string name="help_document_cautions">These views and exports may contain credentials. Opening a document neither fetches an update nor applies it to a running core.</string>
+    <string name="help_localconfig_purpose">Process subscriptions using field enable states, composition strategies and a local routing plan.</string>
+    <string name="help_localconfig_scenarios">Tap a field to edit its value and strategy, apply it to the draft, then save the resource for use by associated subscriptions.</string>
+    <string name="help_localconfig_cautions">Home-owned parameters cannot be overridden here. Applying a field and saving the resource are separate. Disabled fields retain their values without injecting them.</string>
+    <string name="help_script_purpose">Run a local JavaScript main(config) function that returns a configuration object.</string>
+    <string name="help_script_scenarios">Transform a subscription when field overrides cannot express the required changes.</string>
+    <string name="help_script_cautions">Preview executes the draft locally using the selected subscription. Scripts have a two-second deadline, a 256 KiB limit and no network or file APIs. Saving alone does not execute a VPN.</string>
+    <string name="help_groups_purpose">Create a logical rule group or a group that emits a mihomo proxy selector.</string>
+    <string name="help_groups_scenarios">Rule groups select proxy, direct or reject behavior. Selectors filter nodes and configure health checks. Enter one name pattern per line; prefix ! excludes matches.</string>
+    <string name="help_groups_cautions">Group category is fixed after creation. Each rule set belongs to one group. Inline output requires local rule sets. Reference order affects matching priority.</string>
+    <string name="help_rules_purpose">Create reusable local or HTTP rule sets for strategy groups.</string>
+    <string name="help_rules_scenarios">Local content uses complete payload YAML. Remote sources specify URL, behavior, format and update interval.</string>
+    <string name="help_rules_cautions">Source changes retain both drafts until saving validates the selected source. MRS requires domain or ipcidr. No-resolve does not change rule order.</string>
+    <string name="help_fields_purpose">Insert a typed field into the current YAML draft using the mihomo field catalog.</string>
+    <string name="help_fields_scenarios">Search a technical field path, choose its value, then insert it into the draft.</string>
+    <string name="help_fields_cautions">Fields owned by Home or the Android service cannot be edited. Supported strategies vary by field. Save the resource after applying field changes.</string>
+    <string name="help_tools_purpose">This area is reserved for connection, log and diagnostic tools.</string>
+    <string name="help_tools_scenarios">Future diagnostics will be available through this navigation entry.</string>
+    <string name="help_tools_cautions">Tools are deferred in this version. Current work covers Home, Subscriptions and Config.</string>
+</resources>

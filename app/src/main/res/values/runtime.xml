@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="runtime_append_unique">Append unique</string>
+    <string name="runtime_enable_resource">Inject %1$s</string>
+    <string name="runtime_add_preset">Add preset</string>
+    <string name="runtime_route_exclude">Excluded subnets</string>
+    <string name="runtime_yaml_error">Invalid YAML</string>
+    <string name="runtime_yaml_error_line">%1$s: check line %2$d. The draft has been kept; nothing was saved.</string>
+    <string name="runtime_yaml_error_field">%1$s: check the YAML structure and allowed values. The draft has been kept; nothing was saved.</string>
+    <string name="runtime_continue_editing">Continue editing</string>
+    <string name="runtime_revert_field">Revert this field</string>
+    <string name="runtime_forced_help">Home always overwrites this field after the subscription and its local configuration or script. A switch sets the value, including false; it does not disable injection. Saving changes the candidate and requires a restart to affect an active session.</string>
+    <string name="runtime_list_help">Off preserves the composed source field. On applies this YAML list: Append unique keeps source items first and adds new items once; Override replaces the entire list. An empty override clears the source. Restore defaults changes only this draft’s content. Saving requires valid YAML and does not restart the proxy.</string>
+    <string name="runtime_nameserver_help">On by default with 114.114.114.114 and 223.5.5.5, using Append unique. Off preserves the composed source field. Append unique keeps source items first and adds new items once; Override replaces the whole list. At least one resolver is required. Restore defaults changes only this draft’s content.</string>
+    <string name="runtime_mapping_help">Off preserves the composed source. On with Append unique merges by key: the entire Home value for a duplicate key wins, including any list value. Override replaces the whole mapping; an empty override clears it. Enabling hosts also injects dns.use-hosts=true; disabling it preserves both source fields. Restore defaults changes only this draft’s content.</string>
+    <string name="runtime_lan_help">The desktop default has 18 DIRECT rules. Home prepends this YAML list to the final rules, removing exact duplicates while keeping other source rules in order. Only DIRECT rules are accepted. An empty list adds no prefix. This field has no injection switch or replace strategy.</string>
+    <string name="runtime_route_purpose">Exclude IPv4 or IPv6 CIDR subnets from the Android VPN routes. Off preserves source exclusions; on applies the selected merge strategy.</string>
+    <string name="runtime_route_scenarios">Use this when a subnet must bypass the VPN entirely. This differs from a DIRECT rule, which still handles the connection inside mihomo. The desktop default is off, with an empty list and Append unique.</string>
+    <string name="runtime_route_cautions">Android owns the VPN interface and routes. Android 13+ supports excluded routes; Android 8–12 uses equivalent included CIDRs with a limit of 2,048 routes. Oversized plans fail before VPN establishment. The private DNS address 172.19.0.2 always stays reachable through the VPN. Changes require a restart; desktop auto-route and auto-detect-interface switches do not apply.</string>
+</resources>

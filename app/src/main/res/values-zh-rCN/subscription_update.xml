@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collapse_subscription_panel">点击收起面板</string>
+    <string name="associate_subscription_handler">关联配置或脚本</string>
+    <string name="refresh_subscription">刷新 %1$s</string>
+    <string name="tun_stack">内核协议栈</string>
+    <string name="vpn_permission_denied">VPN 授权已取消或未获允许。</string>
+    <string name="vpn_permission_unavailable">无法打开系统 VPN 授权。</string>
+    <string name="scan_subscription_qr">扫描订阅二维码</string>
+    <string name="camera_permission_denied">相机权限未获允许，可到系统设置开启，或直接粘贴订阅链接。</string>
+    <string name="camera_unavailable">相机不可用，请关闭扫码后重试。</string>
+    <string name="qr_invalid_url">该二维码不包含有效的 HTTP 或 HTTPS 订阅链接。</string>
+    <string name="open_system_settings">打开系统设置</string>
+    <string name="subscription_name_optional">名称（可选）</string>
+    <string name="unnamed_subscription">未命名订阅%1$02d</string>
+    <string name="subscription_icon">订阅图标</string>
+    <string name="icon_value">Emoji 或图片链接</string>
+    <string name="clear">清除</string>
+    <string name="detect_subscription_icon">自动检测图标</string>
+    <string name="icon_not_found">未找到可用图标。</string>
+    <string name="rule_provider_count">%1$d 规则提供者</string>
+    <string name="test_node">测试 %1$s 的延迟</string>
+    <string name="permissions">系统授权</string>
+    <string name="permission_granted">已允许</string>
+    <string name="permission_not_granted">未允许</string>
+    <string name="notification_permission">VPN 通知</string>
+    <string name="camera_permission">相机</string>
+    <string name="vpn_authorization">VPN 授权</string>
+    <string name="stack_purpose">选择内置 mihomo TUN 使用的 TCP/IP 实现：system、gVisor 或 mixed。</string>
+    <string name="stack_scenarios">默认保留 gVisor。system 使用系统协议栈处理 TCP 和 UDP；mixed 使用 system 处理 TCP、gVisor 处理 UDP。</string>
+    <string name="stack_cautions">Android 始终通过系统授权的 VPN/TUN 工作；这里只切换协议栈，不改变 VPN 授权。运行中修改后需要停止并重新启动。</string>
+    <string name="icon_purpose">使用系统字体显示 Emoji，或使用 HTTP/HTTPS 图片作为订阅图标。</string>
+    <string name="icon_scenarios">可输入 Emoji、从图标表选择或粘贴图片链接。自动检测依次查找订阅站点的 favicon.ico、favicon.png、sub.ico、sub.png。</string>
+    <string name="icon_cautions">链接导入时，留空图标会自动检测。检测不会携带订阅查询参数或凭据，且不跨站跳转。图片存入私有缓存；失败时显示地球图标，不阻止导入。</string>
+    <string name="scan_purpose">使用相机识别二维码中的订阅链接。</string>
+    <string name="scan_scenarios">点击链接输入框右侧扫码按钮并允许相机权限，识别出 HTTP/HTTPS 链接后自动填入输入框。</string>
+    <string name="scan_cautions">识别在设备本地完成，不依赖 Google Play 服务；不保存或上传相机画面。扫码只填入链接，不自动导入或打开；关闭扫码或进入后台后释放相机。</string>
+    <string name="permissions_purpose">查看系统 VPN、通知和相机授权状态。</string>
+    <string name="permissions_scenarios">连接时申请 VPN 授权；Android 13 及以上首次连接时申请通知权限；只有点击扫码时才申请相机权限。</string>
+    <string name="permissions_cautions">拒绝通知不阻止 VPN，但通知栏可能不显示连接通知。拒绝相机仍可粘贴链接或文本。撤销 VPN 授权会关闭通道和内核；无需 root、存储或电池优化豁免权限。</string>
+    <plurals name="seconds_ago">
+        <item quantity="one">%1$d秒前</item>
+        <item quantity="other">%1$d秒前</item>
+    </plurals>
+    <plurals name="minutes_ago">
+        <item quantity="one">%1$d分钟前</item>
+        <item quantity="other">%1$d分钟前</item>
+    </plurals>
+    <plurals name="hours_ago">
+        <item quantity="one">%1$d小时前</item>
+        <item quantity="other">%1$d小时前</item>
+    </plurals>
+    <plurals name="days_ago">
+        <item quantity="one">%1$d天前</item>
+        <item quantity="other">%1$d天前</item>
+    </plurals>
+</resources>

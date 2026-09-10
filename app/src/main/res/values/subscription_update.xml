@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collapse_subscription_panel">Tap to collapse panel</string>
+    <string name="associate_subscription_handler">Link config or script</string>
+    <string name="refresh_subscription">Refresh %1$s</string>
+    <string name="tun_stack">Kernel network stack</string>
+    <string name="vpn_permission_denied">VPN authorization was cancelled or denied.</string>
+    <string name="vpn_permission_unavailable">System VPN authorization is unavailable.</string>
+    <string name="scan_subscription_qr">Scan subscription QR code</string>
+    <string name="camera_permission_denied">Camera access was denied. You can enable it in system settings or paste the subscription URL.</string>
+    <string name="camera_unavailable">Camera unavailable. Close the scanner and try again.</string>
+    <string name="qr_invalid_url">This QR code does not contain a valid HTTP or HTTPS subscription URL.</string>
+    <string name="open_system_settings">Open system settings</string>
+    <string name="subscription_name_optional">Name (optional)</string>
+    <string name="unnamed_subscription">Unnamed subscription %1$02d</string>
+    <string name="subscription_icon">Subscription icon</string>
+    <string name="icon_value">Emoji or image URL</string>
+    <string name="clear">Clear</string>
+    <string name="detect_subscription_icon">Detect icon</string>
+    <string name="icon_not_found">No usable icon was found.</string>
+    <string name="rule_provider_count">%1$d rule providers</string>
+    <string name="test_node">Test latency for %1$s</string>
+    <string name="permissions">System permissions</string>
+    <string name="permission_granted">Allowed</string>
+    <string name="permission_not_granted">Not allowed</string>
+    <string name="notification_permission">VPN notification</string>
+    <string name="camera_permission">Camera</string>
+    <string name="vpn_authorization">VPN authorization</string>
+    <string name="stack_purpose">Choose the TCP/IP implementation used by the built-in mihomo TUN: system, gVisor, or mixed.</string>
+    <string name="stack_scenarios">Keep gVisor by default. Use system to process TCP and UDP with the system stack, or mixed for system TCP and gVisor UDP.</string>
+    <string name="stack_cautions">Android always uses the system-authorized VPN/TUN. This changes its stack, not the VPN permission. Saved changes require stopping and starting the connection.</string>
+    <string name="icon_purpose">Use an emoji rendered by the device font, or an HTTP/HTTPS image as the subscription icon.</string>
+    <string name="icon_scenarios">Type an emoji, select one from the grid, or paste an image URL. Detection checks favicon.ico, favicon.png, sub.ico and sub.png at the subscription origin.</string>
+    <string name="icon_cautions">An empty icon is detected when importing a URL. Detection sends no subscription query or credentials and stays on the same origin. Images are cached privately; failure uses the globe icon and does not prevent import.</string>
+    <string name="scan_purpose">Read a subscription URL from a QR code with the camera.</string>
+    <string name="scan_scenarios">Tap the scanner beside the URL field and grant camera access. A valid HTTP/HTTPS result fills the field for review.</string>
+    <string name="scan_cautions">Recognition runs on this device without Google Play services. Camera frames are neither saved nor uploaded. Scanning does not import or open the URL; closing or backgrounding the scanner releases the camera.</string>
+    <string name="permissions_purpose">Review system VPN, notification and camera authorization.</string>
+    <string name="permissions_scenarios">VPN consent is requested when connecting. Android 13 or later requests notification permission on first connection. Camera access is requested only when scanning.</string>
+    <string name="permissions_cautions">Denying notifications does not prevent VPN, but its notification may be hidden. Denying camera access still allows pasted URLs and text. Revoking VPN closes the tunnel and core; no root, storage or battery exemption is required.</string>
+    <plurals name="seconds_ago">
+        <item quantity="one">%1$d second ago</item>
+        <item quantity="other">%1$d seconds ago</item>
+    </plurals>
+    <plurals name="minutes_ago">
+        <item quantity="one">%1$d minute ago</item>
+        <item quantity="other">%1$d minutes ago</item>
+    </plurals>
+    <plurals name="hours_ago">
+        <item quantity="one">%1$d hour ago</item>
+        <item quantity="other">%1$d hours ago</item>
+    </plurals>
+    <plurals name="days_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+</resources>

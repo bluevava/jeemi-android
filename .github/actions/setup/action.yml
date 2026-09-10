@@ -1,0 +1,38 @@
+name: Jeemi Android build environment
+description: Install the tool versions declared by scripts/toolchain.json on Ubuntu runners.
+runs:
+  using: composite
+  steps:
+    - name: Read locked tool versions
+      id: versions
+      shell: bash
+      run: python3 scripts/dev.py release-workflow metadata
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+      with:
+        python-version: ${{ steps.versions.outputs.python }}
+    - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+      with:
+        distribution: temurin
+        java-version: ${{ steps.versions.outputs.java }}
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: ${{ steps.versions.outputs.go }}
+        cache-dependency-path: engine/go.sum
+    - name: Install locked Android packages
+      shell: bash
+      env:
+        COMPILE_SDK: ${{ steps.versions.outputs.compileSdk }}
+        BUILD_TOOLS: ${{ steps.versions.outputs.buildTools }}
+        NDK_VERSION: ${{ steps.versions.outputs.ndk }}
+      run: |
+        python - <<'PY'
+        import os
+        from pathlib import Path
+        import subprocess
+        sdk = Path(os.environ['ANDROID_HOME'])
+        manager = sdk / 'cmdline-tools/latest/bin/sdkmanager'
+        subprocess.run([str(manager), '--licenses'], input='y\n' * 100, text=True, check=True)
+        subprocess.run([str(manager), f"platforms;android-{os.environ['COMPILE_SDK']}",
+                        f"build-tools;{os.environ['BUILD_TOOLS']}", f"ndk;{os.environ['NDK_VERSION']}"], check=True)
+        PY
+        chmod +x gradlew

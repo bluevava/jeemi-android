@@ -1,0 +1,20 @@
+* text=auto
+*.kt text eol=lf
+*.kts text eol=lf
+*.go text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.png binary
+*.so binary
+*.gz binary
+*.dat binary
+*.mmdb binary
+*.metadb binary
+*.jks binary
+# Resource bytes must survive export, Git checkout and APK packaging unchanged.
+resources/** -text whitespace=trailing-space,space-before-tab,cr-at-eol

@@ -1,0 +1,11 @@
+Jeemi-Android bundled GEO snapshot: 2026-09-09T00:26:41Z
+Distribution: MetaCubeX/meta-rules-dat
+https://github.com/MetaCubeX/meta-rules-dat
+License and upstream attribution: GEO-LICENSE.txt and
+https://github.com/MetaCubeX/meta-rules-dat/blob/master/README.md
+
+Files and SHA-256 digests are listed in assets/geodata/manifest.json.
+Included: geoip.metadb, GeoSite.dat, ASN.mmdb (upstream GeoLite2-ASN.mmdb).
+The upstream distribution credits Loyalsoldier/geoip, v2fly/domain-list-community,
+Loyalsoldier/domain-list-custom, blackmatrix7/ios_rule_script and other contributors.
+ASN data includes GeoLite2 data created by MaxMind, available from https://www.maxmind.com.

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="help_connection_purpose">主页开关控制 VPN 启动和停止；各页面右上角的启动或刷新图标用于快速启动或按当前已保存配置重启。状态卡标题显示选中的订阅，点击进入订阅；没有订阅时直接打开导入。</string>
+    <string name="help_connection_scenarios">首次启动需完成系统 VPN 授权。出站模式依次为规则、全局、直连；下方为 system、gVisor、mixed 协议栈，默认 gVisor。更改模式、协议栈或运行参数后，点击右上角重启使其生效。</string>
+    <string name="help_connection_cautions">只有内核确认 TUN 就绪后才显示运行中。重启会先关闭旧通道，期间网络连接会中断；未保存的编辑草稿不会应用。通知权限被拒绝不阻止已经授权的 VPN，应用自身流量绕过 VPN 以避免内核出站循环。</string>
+    <string name="help_core_purpose">查看随安装包提供的 mihomo 内核版本和当前架构。</string>
+    <string name="help_core_scenarios">手动检查按钮只执行版本命令，可用于排查安装或架构问题。</string>
+    <string name="help_core_cautions">Android 从安装目录运行内核，更新内核需要更新安装包。普通启动不重复执行版本检查。</string>
+    <string name="help_runtime_purpose">作为最终覆盖层，将主页运行参数注入订阅与本地处理之后。</string>
+    <string name="help_runtime_scenarios">基础和 DNS 标量始终覆盖组合来源，包括 false。可选资源使用注入开关及追加去重／完全覆盖分段切换；映射追加按键合并，主页同名键的完整值优先。</string>
+    <string name="help_runtime_cautions">停用可选资源会保留源值，不等于写入 false 或空列表。保存不修改订阅原文，也不会重启当前会话。</string>
+    <string name="help_nodes_purpose">显示当前订阅组合候选的代理选择器；连接后显示对应会话的节点和延迟。</string>
+    <string name="help_nodes_scenarios">收起的订阅面板显示到期日期、用量和更新时长。展开后点击卡片选择订阅，高亮显示当前选择；卡片可直接刷新、关联本地配置或脚本，点击顶部收起面板。选择器右侧显示已选节点。使用底部工具条测速、搜索、显示隐藏组或设置漏网之鱼。搜索时仍可选择节点和测速；点击节点卡片的延迟按钮单独测速，绿/黄/红分别表示不超过 200ms、不超过 500ms 和更慢或失败。批量测速时暂停单个节点测速。</string>
+    <string name="help_nodes_cautions">搜索仅匹配节点名称，支持 | 或、&amp; 与、! 排除，兼容手机输入法的全角 ｜ ＆ ！；先或、再与、最后排除。例如 hk | jp &amp; gm !ev 表示 hk 或 jp，同时含 gm，排除 ev。忽略大小写与每个条件首尾的空白，包括全角空格，内部空格按字面匹配；不匹配选择器名、协议或提供者名。批量测速只测搜索结果，无结果时不回退为全部节点。未连接或与活动会话不一致时，手动选择器保存下次启动使用的预选节点；仅从远程提供者加载的成员需启动后才可用。自动选择组仍由内核选点。测速必须对应活动会话，不会把旧会话数据当作新配置结果。</string>
+    <string name="help_providers_purpose">管理当前订阅组合候选中的规则提供者，包括已停用的条目。</string>
+    <string name="help_providers_scenarios">关闭条目可停用该提供者及引用规则。匹配的运行会话中可以手动刷新 HTTP 提供者。</string>
+    <string name="help_providers_cautions">开关按订阅保存，并在漏网之鱼与主页覆盖之前应用；改变后需要重启当前会话。</string>
+    <string name="help_association_purpose">为订阅选择一个本地配置或脚本处理器。</string>
+    <string name="help_association_scenarios">多份订阅可以复用同一处理器；策略组和规则集由本地配置的规则方案引用。</string>
+    <string name="help_association_cautions">配置和脚本互斥。保存前验证所有受影响候选，原始订阅保留不变；旧版附加资源保持兼容。</string>
+    <string name="help_preview_purpose">查看当前配置组合或脚本操作生成的候选文档。</string>
+    <string name="help_preview_scenarios">检查订阅与已保存资源的完整组合，或在保存前测试资源草稿。</string>
+    <string name="help_preview_cautions">此页显示组合候选。引用校验不替代实机连接测试。导出包含完整配置，可能包含凭据。</string>
+    <string name="help_document_purpose">阅读已保存的订阅原文或标准化文档。</string>
+    <string name="help_document_scenarios">排查转换结果时，对比导入内容与对应的 mihomo 文档。</string>
+    <string name="help_document_cautions">查看和导出的文档可能包含凭据。打开文档不会拉取更新，也不会应用到运行中的内核。</string>
+    <string name="help_localconfig_purpose">按字段启用状态、组合策略和本地规则方案处理订阅。</string>
+    <string name="help_localconfig_scenarios">点击字段树中的字段，在弹窗编辑值和策略，再应用到草稿；保存资源后用于关联订阅。</string>
+    <string name="help_localconfig_cautions">主页管理的参数不能在此覆盖。字段草稿应用与资源保存分开；停用字段保留值但不注入候选。</string>
+    <string name="help_script_purpose">执行本地 JavaScript 的 main(config) 函数，并返回配置对象。</string>
+    <string name="help_script_scenarios">普通字段覆盖无法表达需要的转换时使用脚本。</string>
+    <string name="help_script_cautions">预览会使用当前订阅执行草稿。脚本限 256 KiB、两秒运行时间，无网络或文件接口。保存本身不会启动 VPN。</string>
+    <string name="help_groups_purpose">创建规则组或实际输出 mihomo 代理选择器的策略组。</string>
+    <string name="help_groups_scenarios">规则组选择代理、直连或拒绝方向；选择器可筛选名称、协议并配置自动检测。名称匹配每行一个，前缀 ! 表示排除。</string>
+    <string name="help_groups_cautions">组类别创建后固定。规则集只能归属一个组，内联输出仅支持本地规则集。引用顺序会影响匹配优先级。</string>
+    <string name="help_rules_purpose">创建可复用的本地或 HTTP 规则集，供策略组引用。</string>
+    <string name="help_rules_scenarios">本地内容使用完整 payload YAML；远程来源设置地址、行为、格式和更新间隔。</string>
+    <string name="help_rules_cautions">切换来源时暂存两侧草稿，保存按当前来源校验。mrs 仅适用于 domain 或 ipcidr，no-resolve 不会改变规则顺序。</string>
+    <string name="help_fields_purpose">通过 mihomo 字段目录，把有类型的字段插入当前 YAML 草稿。</string>
+    <string name="help_fields_scenarios">搜索技术字段路径、选择值，再插入草稿。</string>
+    <string name="help_fields_cautions">主页或 Android 服务管理的字段不可编辑。字段支持的组合方式各不相同；应用到草稿后还需保存整个资源。</string>
+    <string name="help_tools_purpose">此处保留连接、日志与诊断工具的入口。</string>
+    <string name="help_tools_scenarios">后续需要查看连接、日志或进行诊断时使用。</string>
+    <string name="help_tools_cautions">本版本工具页暂缓实现，当前功能集中在主页、订阅和配置。</string>
+</resources>
