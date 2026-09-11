@@ -149,7 +149,7 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
                 val expanded = group.name in expandedGroups || search.active
                 item(key = "group-" + group.name) {
                     SelectorHeader(group,
-                        if (matching) live?.proxies?.get(group.name)?.now else selected?.selections?.get(group.name), matching, expanded) {
+                        if (matching) live?.proxies?.get(group.name)?.now else selected?.selections?.get(group.name), matching, expanded, model.selectorIcons) {
                         expandedGroups = if (group.name in expandedGroups) expandedGroups - group.name else expandedGroups + group.name
                     }
                 }

@@ -12,5 +12,6 @@ class JeemiApplication : Application() {
     val repository by lazy { LibraryRepository(noBackupFilesDir) }
     val engine by lazy { GoBusinessEngine() }
     val geodata by lazy { io.jeemi.android.data.GeoRepository(this) }
+    internal val selectorIcons by lazy { io.jeemi.android.data.SelectorIcons() }
     val runtime by lazy { VpnController(this) }
 }

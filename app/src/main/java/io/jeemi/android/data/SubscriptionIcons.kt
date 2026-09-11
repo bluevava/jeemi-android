@@ -30,17 +30,19 @@ internal class SubscriptionIcons {
         return null
     }
 
-    fun load(address: String, deadline: Long = System.nanoTime() + TimeUnit.SECONDS.toNanos(6)): SubscriptionImage? {
+    fun load(address: String, deadline: Long = System.nanoTime() + TimeUnit.SECONDS.toNanos(6),
+        cancelled: () -> Boolean = { false }): SubscriptionImage? {
         cache[address]?.let { return it }
         return runCatching {
             val origin = requireSubscriptionUrl(address)
             var current = origin
             repeat(6) {
                 val remaining = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime()).coerceAtMost(1500).toInt()
-                require(remaining > 0)
+                require(remaining > 0 && !cancelled())
                 val connection = current.toURL().openConnection() as HttpURLConnection
                 active = connection
                 try {
+                    require(!cancelled())
                     connection.connectTimeout = remaining; connection.readTimeout = remaining
                     connection.instanceFollowRedirects = false; connection.useCaches = false
                     connection.setRequestProperty("Accept", "image/png,image/x-icon,image/vnd.microsoft.icon,image/*;q=0.8")
@@ -55,7 +57,7 @@ internal class SubscriptionIcons {
                         val bytes = connection.inputStream.use { stream ->
                             val output = ByteArrayOutputStream(); val buffer = ByteArray(4096)
                             while (true) {
-                                require(System.nanoTime() < deadline)
+                                require(System.nanoTime() < deadline && !cancelled())
                                 val count = stream.read(buffer)
                                 if (count < 0) break
                                 require(output.size() + count <= 512 * 1024)
@@ -63,6 +65,7 @@ internal class SubscriptionIcons {
                             }
                             output.toByteArray()
                         }
+                        require(!cancelled())
                         val image = encodeSubscriptionImage(bytes) ?: return null
                         val result = SubscriptionImage(address, image)
                         if (cache.size >= 64) cache.keys.firstOrNull()?.let(cache::remove)

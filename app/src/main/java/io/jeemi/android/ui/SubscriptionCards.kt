@@ -3,6 +3,8 @@ package io.jeemi.android.ui
 import android.icu.lang.UCharacter
 import android.icu.lang.UProperty
 import android.icu.text.BreakIterator
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import io.jeemi.android.ui.theme.JeemiShapes
@@ -12,6 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -24,21 +28,33 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.jeemi.android.R
+import io.jeemi.android.data.SelectorIcons
 import io.jeemi.android.domain.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
-internal fun SelectorHeader(group: ProxyGroup, choice: String?, live: Boolean, expanded: Boolean, toggle: () -> Unit) {
+internal fun SelectorHeader(group: ProxyGroup, choice: String?, live: Boolean, expanded: Boolean,
+    icons: SelectorIcons, toggle: () -> Unit) {
     val (emoji, title) = remember(group.name) { selectorTitle(group.name) }
+    var bitmap by remember(group.icon, icons) { mutableStateOf<Bitmap?>(null) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(group.icon, icons, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { bitmap = icons.load(group.icon) }
+    }
     Card(Modifier.fillMaxWidth(), shape = JeemiShapes.Component,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { contentDescription = group.name }
             .clickable(role = Role.Button, onClick = toggle).padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(24.dp), contentAlignment = Alignment.Center) {
-                if (emoji.isEmpty()) Icon(Icons.Outlined.AccountTree, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                val image = bitmap?.takeUnless { it.isRecycled }
+                if (image != null) Image(image.asImageBitmap(), null, Modifier.size(20.dp).testTag("selector-icon-image"))
+                else if (emoji.isEmpty()) Icon(Icons.Outlined.AccountTree, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
                 else Text(emoji, fontSize = 20.sp, maxLines = 1)
             }
             Spacer(Modifier.width(8.dp))
@@ -59,7 +75,7 @@ internal fun SelectorHeader(group: ProxyGroup, choice: String?, live: Boolean, e
 }
 
 // Only presentation separates a leading emoji; exact group keys stay unchanged.
-private fun selectorTitle(name: String): Pair<String, String> {
+internal fun selectorTitle(name: String): Pair<String, String> {
     val text = name.trimStart()
     if (text.isEmpty()) return "" to name
     val iterator = BreakIterator.getCharacterInstance(Locale.ROOT).apply { setText(text) }

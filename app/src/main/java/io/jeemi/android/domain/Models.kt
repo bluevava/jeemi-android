@@ -13,7 +13,8 @@ data class LocalResource(val id: String, val name: String, val kind: ResourceKin
     val content: String, val strategy: String = "auto", val formatVersion: Int = 1,
     val description: String = "")
 data class ProxyGroup(val name: String, val type: String, val members: List<String>,
-    val providers: List<String> = emptyList(), val hidden: Boolean = false, val defaultSelected: String = "")
+    val providers: List<String> = emptyList(), val hidden: Boolean = false, val defaultSelected: String = "",
+    val icon: String = "")
 data class RuleProvider(val name: String, val type: String, val behavior: String)
 data class SubscriptionStructure(val groups: List<ProxyGroup> = emptyList(), val providers: List<RuleProvider> = emptyList())
 data class ConfigField(val path: String, val category: String, val editor: String, val example: String,

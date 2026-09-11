@@ -71,6 +71,7 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
     private var tests: Job? = null
     private val singleTests = mutableMapOf<String, Job>()
     private val icons = SubscriptionIcons()
+    internal val selectorIcons get() = app.selectorIcons
     private val mutations = Mutex()
     private var vpnActionRevision = 0
 

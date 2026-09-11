@@ -60,7 +60,7 @@ class GoBusinessEngine : BusinessEngine {
         val groups = json.getJSONArray("groups")
         val providers = json.getJSONArray("providers")
         return SubscriptionStructure(List(groups.length()) { i -> groups.getJSONObject(i).let {
-            ProxyGroup(it.getString("name"), it.getString("type"), it.getJSONArray("members").strings(), it.getJSONArray("providers").strings(), it.getBoolean("hidden"), it.optString("defaultSelected"))
+            ProxyGroup(it.getString("name"), it.getString("type"), it.getJSONArray("members").strings(), it.getJSONArray("providers").strings(), it.getBoolean("hidden"), it.optString("defaultSelected"), it.optString("icon"))
         } }, List(providers.length()) { i -> providers.getJSONObject(i).let {
             RuleProvider(it.getString("name"), it.getString("type"), it.getString("behavior"))
         } })

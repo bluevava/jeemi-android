@@ -172,6 +172,7 @@ func ExecuteScript(configuration, source string) (string, error) {
 type groupSummary struct {
 	Name            string   `json:"name"`
 	Type            string   `json:"type"`
+	Icon            string   `json:"icon"`
 	Members         []string `json:"members"`
 	Providers       []string `json:"providers"`
 	Hidden          bool     `json:"hidden"`
@@ -199,6 +200,9 @@ func InspectSubscription(configuration string) (string, error) {
 			}
 			if value, found, _ := document.Find(item, "/type"); found {
 				group.Type = value.Value
+			}
+			if value, found, _ := document.Find(item, "/icon"); found && value.Kind == yaml.ScalarNode && value.Tag == "!!str" {
+				group.Icon = value.Value
 			}
 			if value, found, _ := document.Find(item, "/default-selected"); found {
 				group.DefaultSelected = value.Value
