@@ -3,7 +3,6 @@
     <string name="collapse_subscription_panel">Tap to collapse panel</string>
     <string name="associate_subscription_handler">Link config or script</string>
     <string name="refresh_subscription">Refresh %1$s</string>
-    <string name="tun_stack">Kernel network stack</string>
     <string name="vpn_permission_denied">VPN authorization was cancelled or denied.</string>
     <string name="vpn_permission_unavailable">System VPN authorization is unavailable.</string>
     <string name="scan_subscription_qr">Scan subscription QR code</string>
@@ -26,9 +25,6 @@
     <string name="notification_permission">VPN notification</string>
     <string name="camera_permission">Camera</string>
     <string name="vpn_authorization">VPN authorization</string>
-    <string name="stack_purpose">Choose the TCP/IP implementation used by the built-in mihomo TUN: system, gVisor, or mixed.</string>
-    <string name="stack_scenarios">Keep gVisor by default. Use system to process TCP and UDP with the system stack, or mixed for system TCP and gVisor UDP.</string>
-    <string name="stack_cautions">Android always uses the system-authorized VPN/TUN. This changes its stack, not the VPN permission. Saved changes require stopping and starting the connection.</string>
     <string name="icon_purpose">Use an emoji rendered by the device font, or an HTTP/HTTPS image as the subscription icon.</string>
     <string name="icon_scenarios">Type an emoji, select one from the grid, or paste an image URL. Detection checks favicon.ico, favicon.png, sub.ico and sub.png at the subscription origin.</string>
     <string name="icon_cautions">An empty icon is detected when importing a URL. Detection sends no subscription query or credentials and stays on the same origin. Images are cached privately; failure uses the globe icon and does not prevent import.</string>

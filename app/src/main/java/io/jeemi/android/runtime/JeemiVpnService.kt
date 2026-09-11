@@ -1,3 +1,6 @@
+// Author: Bluevava
+// Open-source repository: https://github.com/bluevava/jeemi-android
+
 package io.jeemi.android.runtime
 
 import android.app.NotificationChannel

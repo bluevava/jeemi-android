@@ -3,11 +3,9 @@ package mobile
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"jeemi-android/engine/internal/config/document"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -18,12 +16,18 @@ import (
 
 // CoreProcess owns the child; Android owns the original VPN descriptor.
 type CoreProcess struct {
-	command      *exec.Cmd
+	process      coreChild
 	stopped      atomic.Bool
 	done         chan struct{}
 	stopOnce     sync.Once
 	tunnelStatus *tunnelStatus
 	ownerServer  *http.Server
+}
+
+type coreChild interface {
+	Wait() error
+	Signal(os.Signal) error
+	Kill() error
 }
 type tunnelStatus struct {
 	mutex     sync.Mutex
@@ -79,15 +83,9 @@ func startCore(executable, home string, descriptor int, owner ConnectionOwner) (
 		tun.Close()
 		return nil, fmt.Errorf("invalid_core_location")
 	}
-	child := exec.Command(executable, "-d", home, "-f", filepath.Join(home, "config.yaml"))
-	child.ExtraFiles = []*os.File{tun}
-	child.Stdin = nil
 	status := &tunnelStatus{}
-	child.Stdout = status
-	child.Stderr = io.Discard
-	child.Env = []string{"PATH=/system/bin", "HOME=" + home}
-	configureChild(child)
-	result := &CoreProcess{command: child, done: make(chan struct{}), tunnelStatus: status}
+	environment := []string{"PATH=/system/bin", "HOME=" + home}
+	result := &CoreProcess{done: make(chan struct{}), tunnelStatus: status}
 	if owner != nil {
 		server, address, token, err := ownerServer(owner)
 		if err != nil {
@@ -95,7 +93,7 @@ func startCore(executable, home string, descriptor int, owner ConnectionOwner) (
 			return nil, fmt.Errorf("owner_bridge_failed")
 		}
 		result.ownerServer = server
-		child.Env = append(child.Env, "JEEMI_ANDROID_OWNER="+address, "JEEMI_ANDROID_TOKEN="+token)
+		environment = append(environment, "JEEMI_ANDROID_OWNER="+address, "JEEMI_ANDROID_TOKEN="+token)
 	}
 	started := make(chan error, 1)
 	go func() {
@@ -108,7 +106,7 @@ func startCore(executable, home string, descriptor int, owner ConnectionOwner) (
 		// until the child exits so ordinary Go thread retirement cannot kill it.
 		runtime.LockOSThread()
 		defer runtime.UnlockOSThread()
-		err := child.Start()
+		child, err := startCoreChild(executable, []string{"-d", home, "-f", filepath.Join(home, "config.yaml")}, environment, tun, status)
 		tun.Close()
 		if err != nil {
 			result.stopped.Store(true)
@@ -116,6 +114,7 @@ func startCore(executable, home string, descriptor int, owner ConnectionOwner) (
 			started <- fmt.Errorf("core_exec_failed")
 			return
 		}
+		result.process = child
 		started <- nil
 		_ = child.Wait()
 		result.stopped.Store(true)
@@ -132,13 +131,13 @@ func (p *CoreProcess) Stop() {
 		if p.stopped.Load() {
 			return
 		}
-		_ = p.command.Process.Signal(os.Interrupt)
+		_ = p.process.Signal(os.Interrupt)
 		select {
 		case <-p.done:
 			return
 		case <-time.After(2 * time.Second):
 		}
-		_ = p.command.Process.Kill()
+		_ = p.process.Kill()
 		<-p.done
 	})
 }
@@ -154,13 +153,6 @@ func AndroidSessionConfiguration(candidate, secret string, port int, ipv6 bool) 
 		return "", fmt.Errorf("invalid_session_configuration")
 	}
 	root := document.Root(doc)
-	stack := "gvisor"
-	if node, found, _ := document.Find(root, "/tun/stack"); found {
-		stack = node.Value
-	}
-	if stack != "system" && stack != "gvisor" && stack != "mixed" {
-		return "", fmt.Errorf("invalid_tun_stack")
-	}
 	exclusions, err := androidRouteExclusions(root)
 	if err != nil {
 		return "", err
@@ -172,7 +164,7 @@ func AndroidSessionConfiguration(candidate, secret string, port int, ipv6 bool) 
 			return "", err
 		}
 	}
-	tun := map[string]any{"enable": true, "file-descriptor": 3, "stack": stack, "auto-route": false,
+	tun := map[string]any{"enable": true, "file-descriptor": 3, "stack": androidTUNStack, "auto-route": false,
 		"auto-detect-interface": false, "auto-redirect": false, "mtu": 1500, "dns-hijack": []string{"any:53", "tcp://any:53"}}
 	if len(exclusions) > 0 {
 		tun["route-exclude-address"] = exclusions

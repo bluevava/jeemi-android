@@ -127,7 +127,6 @@ class GoBusinessEngine : BusinessEngine {
             .put("fallback", JSONObject().put("mode", subscription.fallbackMode).put("selector", subscription.fallbackSelector))
             .put("legacyValues", JSONObject(preferences.runtimeValues))
             .put("geoMode", preferences.geoMode).put("geoLoader", preferences.geoLoader)
-            .put("tunStack", preferences.tunStack.configValue)
         val result = JSONObject(Mobile.composeWorkspace(request.toString()))
         val fallback = result.getJSONObject("fallback")
         val selected = fallback.getJSONObject("selection")

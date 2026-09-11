@@ -75,7 +75,10 @@ func UpgradeRuntimePreferences(raw string) (string, error) {
 	return NormalizeRuntimePreferences(string(b))
 }
 
-func applyHome(contents []byte, raw, mode, geoMode, loader, stack string) ([]byte, error) {
+// The candidate and actual VpnService session share one fixed Android stack.
+const androidTUNStack = "gvisor"
+
+func applyHome(contents []byte, raw, mode, geoMode, loader string) ([]byte, error) {
 	var p runtimeconfig.Preferences
 	if raw == "" {
 		raw = "{}"
@@ -99,12 +102,6 @@ func applyHome(contents []byte, raw, mode, geoMode, loader, stack string) ([]byt
 		return nil, err
 	}
 	root := document.Root(doc)
-	if stack == "" {
-		stack = "gvisor"
-	}
-	if stack != "system" && stack != "gvisor" && stack != "mixed" {
-		return nil, fmt.Errorf("invalid_tun_stack")
-	}
 	for _, path := range []string{"/geo-update-interval", "/geox-url"} {
 		if err = document.DeleteMappingPath(root, path); err != nil {
 			return nil, err
@@ -116,7 +113,7 @@ func applyHome(contents []byte, raw, mode, geoMode, loader, stack string) ([]byt
 		value any
 	}{
 		{"/geodata-mode", geoMode == "dat"}, {"/geodata-loader", loader}, {"/geo-auto-update", false},
-		{"/tun/enable", true}, {"/tun/stack", stack},
+		{"/tun/enable", true}, {"/tun/stack", androidTUNStack},
 	} {
 		path := item.path
 		raw, _ := yaml.Marshal(item.value)

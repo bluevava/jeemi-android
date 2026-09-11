@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="help_connection_purpose">主页开关控制 VPN 启动和停止；各页面右上角的启动或刷新图标用于快速启动或按当前已保存配置重启。状态卡标题显示选中的订阅，点击进入订阅；没有订阅时直接打开导入。</string>
-    <string name="help_connection_scenarios">首次启动需完成系统 VPN 授权。出站模式依次为规则、全局、直连；下方为 system、gVisor、mixed 协议栈，默认 gVisor。更改模式、协议栈或运行参数后，点击右上角重启使其生效。</string>
+    <string name="help_connection_scenarios">首次启动需完成系统 VPN 授权。出站模式可选规则、全局、直连；Jeemi 固定使用 gVisor TUN 协议栈。更改出站模式或运行参数后，点击右上角重启使其生效。</string>
     <string name="help_connection_cautions">只有内核确认 TUN 就绪后才显示运行中。重启会先关闭旧通道，期间网络连接会中断；未保存的编辑草稿不会应用。通知权限被拒绝不阻止已经授权的 VPN，应用自身流量绕过 VPN 以避免内核出站循环。</string>
     <string name="help_core_purpose">查看随安装包提供的 mihomo 内核版本和当前架构。</string>
     <string name="help_core_scenarios">手动检查按钮只执行版本命令，可用于排查安装或架构问题。</string>

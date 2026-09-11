@@ -1,3 +1,6 @@
+// Author: Bluevava
+// Open-source repository: https://github.com/bluevava/jeemi-android
+
 // Package mobile is the narrow, offline business API used by Android.
 // It does not embed mihomo or establish a VPN.
 package mobile

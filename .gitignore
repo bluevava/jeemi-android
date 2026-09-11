@@ -17,5 +17,11 @@ github-secrets.json
 **/build/
 __pycache__/
 *.pyc
+*.pyo
 .DS_Store
 Thumbs.db
+[Dd]esktop.ini
+/.vscode/task-history.ndjson
+# Intermediate files from core and GEO downloads.
+/resources/mihomo/jniLibs/*/*.download
+/resources/geodata/assets/geodata/*.download

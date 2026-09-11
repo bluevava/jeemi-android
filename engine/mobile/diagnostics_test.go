@@ -119,7 +119,7 @@ func TestHomeCompositionHasStableBytesAcrossRepeatedIdenticalInputs(t *testing.T
 	source := []byte("proxy-groups: [{name: Choose, type: select, proxies: [DIRECT, REJECT]}]\nrules: ['MATCH,Choose']\n")
 	previous := ""
 	for i := 0; i < 100; i++ {
-		result, err := applyHome(source, RuntimeDefaults(), "rule", "mmdb", "memconservative", "gvisor")
+		result, err := applyHome(source, RuntimeDefaults(), "rule", "mmdb", "memconservative")
 		if err != nil {
 			t.Fatal(err)
 		}

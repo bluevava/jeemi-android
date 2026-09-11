@@ -14,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.util.UUID
+import org.json.JSONObject
 
 @RunWith(AndroidJUnit4::class)
 class BusinessBridgeTest {
@@ -57,6 +58,38 @@ class BusinessBridgeTest {
         val core = BundledCore(context)
         assertTrue(core.executable.canonicalPath.startsWith(context.applicationInfo.nativeLibraryDir))
         assertTrue(core.version().contains("v1.19.30"))
+    }
+
+    @Test fun retiredStackPreferencesKeepOldLibrariesReadableWithoutChangingSubscriptions() {
+        val context = ApplicationProvider.getApplicationContext<JeemiApplication>()
+        val directory = File(context.cacheDir, "fixed-stack-${UUID.randomUUID()}").apply { mkdirs() }
+        try {
+            val engine = GoBusinessEngine()
+            val original = "tun: {enable: false, stack: mixed}\nrules: ['MATCH,DIRECT']\n"
+            val item = engine.normalize("Legacy stack fixture", original)
+            val library = Library(listOf(item), item.id)
+            val repository = LibraryRepository(directory)
+            repository.save(library)
+            val file = File(directory, "library-v1.json")
+            val saved = file.readText()
+            val expected = engine.project(item, library.preferences, emptyList())
+            assertTrue(expected.yaml.contains("stack: gvisor"))
+            for (schema in 1..5) for (stack in listOf("SYSTEM", "MIXED", "GVISOR", "UNKNOWN")) {
+                val legacy = JSONObject(saved).put("schemaVersion", schema)
+                legacy.getJSONObject("preferences").put("tunStack", stack)
+                val legacyText = legacy.toString()
+                file.writeText(legacyText)
+                val restored = repository.load()
+                assertEquals(library, restored)
+                assertEquals(legacyText, file.readText())
+                assertEquals(original, restored.selected!!.original)
+                val candidate = engine.project(restored.selected!!, restored.preferences, restored.resources)
+                assertEquals(expected.revision, candidate.revision)
+                repository.save(restored)
+                assertFalse(JSONObject(file.readText()).getJSONObject("preferences").has("tunStack"))
+                assertEquals(original, repository.load().selected!!.original)
+            }
+        } finally { directory.deleteRecursively() }
     }
 
     @Test fun resourceAssociationAndRuntimeSettingsRoundTripAndCompose() {

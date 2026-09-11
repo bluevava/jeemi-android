@@ -195,7 +195,6 @@ type workspaceInput struct {
 	Fallback          fallbackoverride.Selection `json:"fallback"`
 	GeoMode           string                     `json:"geoMode"`
 	GeoLoader         string                     `json:"geoLoader"`
-	TunStack          string                     `json:"tunStack"`
 	LegacyValues      map[string]string          `json:"legacyValues"`
 }
 type projection struct {
@@ -297,7 +296,7 @@ func ComposeWorkspace(raw string) (string, error) {
 		}
 		candidate = []byte(text)
 	}
-	candidate, err = applyHome(candidate, string(input.Runtime), input.Mode, input.GeoMode, input.GeoLoader, input.TunStack)
+	candidate, err = applyHome(candidate, string(input.Runtime), input.Mode, input.GeoMode, input.GeoLoader)
 	if err != nil {
 		return "", err
 	}

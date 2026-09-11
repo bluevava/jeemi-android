@@ -3,7 +3,6 @@
     <string name="collapse_subscription_panel">点击收起面板</string>
     <string name="associate_subscription_handler">关联配置或脚本</string>
     <string name="refresh_subscription">刷新 %1$s</string>
-    <string name="tun_stack">内核协议栈</string>
     <string name="vpn_permission_denied">VPN 授权已取消或未获允许。</string>
     <string name="vpn_permission_unavailable">无法打开系统 VPN 授权。</string>
     <string name="scan_subscription_qr">扫描订阅二维码</string>
@@ -26,9 +25,6 @@
     <string name="notification_permission">VPN 通知</string>
     <string name="camera_permission">相机</string>
     <string name="vpn_authorization">VPN 授权</string>
-    <string name="stack_purpose">选择内置 mihomo TUN 使用的 TCP/IP 实现：system、gVisor 或 mixed。</string>
-    <string name="stack_scenarios">默认保留 gVisor。system 使用系统协议栈处理 TCP 和 UDP；mixed 使用 system 处理 TCP、gVisor 处理 UDP。</string>
-    <string name="stack_cautions">Android 始终通过系统授权的 VPN/TUN 工作；这里只切换协议栈，不改变 VPN 授权。运行中修改后需要停止并重新启动。</string>
     <string name="icon_purpose">使用系统字体显示 Emoji，或使用 HTTP/HTTPS 图片作为订阅图标。</string>
     <string name="icon_scenarios">可输入 Emoji、从图标表选择或粘贴图片链接。自动检测依次查找订阅站点的 favicon.ico、favicon.png、sub.ico、sub.png。</string>
     <string name="icon_cautions">链接导入时，留空图标会自动检测。检测不会携带订阅查询参数或凭据，且不跨站跳转。图片存入私有缓存；失败时显示地球图标，不阻止导入。</string>

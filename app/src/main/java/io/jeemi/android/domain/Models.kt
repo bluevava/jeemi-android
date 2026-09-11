@@ -2,7 +2,6 @@ package io.jeemi.android.domain
 
 enum class AppTheme { SYSTEM, LIGHT, DARK }
 enum class ProxyMode(val configValue: String) { RULE("rule"), GLOBAL("global"), DIRECT("direct") }
-enum class TunStack(val configValue: String, val displayName: String) { SYSTEM("system", "system"), GVISOR("gvisor", "gVisor"), MIXED("mixed", "mixed") }
 enum class Destination { HOME, SUBSCRIPTIONS, CONFIG, MORE }
 enum class ToolPage { CONNECTIONS, LOGS, DNS, CORE, GEO, ABOUT }
 enum class ResourceKind { CONFIG, SCRIPT, GROUPS, RULES }
@@ -69,7 +68,6 @@ data class Preferences(
     val connectionReset: String = "selector",
     val geoMode: String = "mmdb",
     val geoLoader: String = "memconservative",
-    val tunStack: TunStack = TunStack.GVISOR,
 )
 
 data class Library(

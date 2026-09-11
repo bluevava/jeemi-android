@@ -41,7 +41,6 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
     val subscriptionAction = stringResource(if (selected == null) R.string.add_subscription else R.string.manage_subscriptions)
     val switchAction = stringResource(if (active) R.string.vpn_stop else R.string.vpn_start)
     val modeLabel = stringResource(R.string.proxy_mode)
-    val stackLabel = stringResource(R.string.tun_stack)
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val linkError = stringResource(R.string.about_link_error)
@@ -87,13 +86,6 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
                         SegmentedButton(selected = state.library.preferences.mode == mode,
                             onClick = { model.savePreferences(state.library.preferences.copy(mode = mode)) },
                             enabled = !state.busy, shape = SegmentedButtonDefaults.itemShape(index, 3)) { Text(stringResource(mode.label)) }
-                    }
-                }
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().semantics { contentDescription = stackLabel }) {
-                    TunStack.entries.forEachIndexed { index, stack ->
-                        SegmentedButton(selected = state.library.preferences.tunStack == stack,
-                            onClick = { model.savePreferences(state.library.preferences.copy(tunStack = stack)) },
-                            enabled = !state.busy, shape = SegmentedButtonDefaults.itemShape(index, 3)) { Text(stack.displayName) }
                     }
                 }
                 if (state.projectionFailed) Text(stringResource(R.string.candidate_error), color = MaterialTheme.colorScheme.error)

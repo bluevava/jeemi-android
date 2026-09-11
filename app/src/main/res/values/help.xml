@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="help_connection_purpose">The Home switch starts and stops VPN. The start or refresh icon at the top of every page starts VPN or restarts it with saved settings. Tap the subscription header to open Subscriptions; an empty library opens the import form.</string>
-    <string name="help_connection_scenarios">Grant system VPN consent on first start. The first control chooses Rule, Global or Direct routing; the second chooses system, gVisor or mixed, with gVisor as the default. Restart from the top bar to apply saved routing, stack or runtime changes.</string>
+    <string name="help_connection_scenarios">Grant system VPN consent on first start. Choose Rule, Global or Direct routing. Jeemi always uses the gVisor TUN stack. Restart from the top bar to apply saved routing or runtime changes.</string>
     <string name="help_connection_cautions">Running appears only after the core confirms TUN is ready. Restart closes the old tunnel first and interrupts active connections; unsaved drafts are not applied. Notification refusal does not block an authorized VPN. App traffic bypasses VPN to prevent a routing loop.</string>
     <string name="help_core_purpose">View the mihomo version and architecture included in this package.</string>
     <string name="help_core_scenarios">The manual Check button runs only the version command to diagnose installation or architecture issues.</string>

@@ -43,7 +43,6 @@ class LibraryRepository(directory: File) {
                 connectionReset = preferences.optString("connectionReset", "selector"),
                 geoMode = preferences.optString("geoMode", "mmdb"),
                 geoLoader = preferences.optString("geoLoader", "memconservative"),
-                tunStack = TunStack.valueOf(preferences.optString("tunStack", "GVISOR")),
             ),
             resources = json.optJSONArray("resources")?.let { items -> List(items.length()) { i ->
                 val item = items.getJSONObject(i)
@@ -73,7 +72,7 @@ class LibraryRepository(directory: File) {
                 .put("showHiddenGroups", preferences.showHiddenGroups)
                 .put("runtimeJson", preferences.runtimeJson).put("nodeDensity", preferences.nodeDensity.name)
                 .put("testConcurrency", preferences.testConcurrency).put("connectionReset", preferences.connectionReset)
-                .put("geoMode", preferences.geoMode).put("geoLoader", preferences.geoLoader).put("tunStack", preferences.tunStack.name))
+                .put("geoMode", preferences.geoMode).put("geoLoader", preferences.geoLoader))
             .put("resources", JSONArray().apply { library.resources.forEach { item ->
                 put(JSONObject().put("id", item.id).put("name", item.name).put("kind", item.kind.name)
                     .put("content", item.content).put("strategy", item.strategy)

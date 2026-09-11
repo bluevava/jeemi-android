@@ -7,7 +7,6 @@ import io.jeemi.android.domain.ResourceKind
 import io.jeemi.android.ui.components.HelpContent
 
 internal val ConnectionHelp = HelpContent(R.string.status_control, R.string.help_connection_purpose, R.string.help_connection_scenarios, R.string.help_connection_cautions)
-internal val StackHelp = HelpContent(R.string.tun_stack, R.string.stack_purpose, R.string.stack_scenarios, R.string.stack_cautions)
 internal val IconHelp = HelpContent(R.string.subscription_icon, R.string.icon_purpose, R.string.icon_scenarios, R.string.icon_cautions)
 internal val ScanHelp = HelpContent(R.string.scan_subscription_qr, R.string.scan_purpose, R.string.scan_scenarios, R.string.scan_cautions)
 internal val PermissionsHelp = HelpContent(R.string.permissions, R.string.permissions_purpose, R.string.permissions_scenarios, R.string.permissions_cautions)

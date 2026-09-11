@@ -14,7 +14,7 @@ class NavigationTest {
         compose.onNodeWithText(context.getString(R.string.status_control)).assertDoesNotExist()
         compose.onNodeWithText(context.getString(R.string.current_subscription)).assertDoesNotExist()
         compose.onNodeWithText(context.getString(R.string.proxy_mode)).assertDoesNotExist()
-        compose.onNodeWithText(context.getString(R.string.tun_stack)).assertDoesNotExist()
+        listOf("system", "gVisor", "mixed").forEach { compose.onNodeWithText(it).assertDoesNotExist() }
         compose.onNodeWithText(context.getString(R.string.about_jeemi_description)).assertIsDisplayed()
         compose.onNodeWithText(context.getString(R.string.add_subscription)).performClick()
         compose.onNode(hasSetTextAction() and hasText(context.getString(R.string.subscription_url))).assertIsDisplayed()

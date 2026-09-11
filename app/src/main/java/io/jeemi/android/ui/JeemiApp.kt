@@ -1,3 +1,6 @@
+// Author: Bluevava
+// Open-source repository: https://github.com/bluevava/jeemi-android
+
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package io.jeemi.android.ui
 
