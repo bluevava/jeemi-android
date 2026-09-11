@@ -16,7 +16,8 @@ import java.net.URLEncoder
 import java.security.MessageDigest
 
 data class VpnRequest(val profileId: String, val yaml: String, val ipv6: Boolean, val revision: String = configurationRevision(yaml), val logLevel: String = "silent",
-    val selections: Map<String, String> = emptyMap(), val defaults: Map<String, String> = emptyMap())
+    val selections: Map<String, String> = emptyMap(), val defaults: Map<String, String> = emptyMap(),
+    val externalUIVersion: String = "")
 data class LiveProxy(val type: String, val now: String, val members: List<String>, val delay: Int?, val manualDelay: Int? = null)
 data class LiveSession(val profileId: String, val revision: String, val geoRevision: String,
     val proxies: Map<String, LiveProxy> = emptyMap(), val sessionId: String = java.util.UUID.randomUUID().toString())
@@ -64,6 +65,10 @@ class VpnController(private val context: Context) {
     }
     fun matches(profile: String?, revision: String?, geo: String): Boolean =
         state.value is RuntimeState.Running && live.value?.let { it.profileId == profile && it.revision == revision && it.geoRevision == geo } == true
+    fun dashboardAddress(profile: String?, revision: String?, geo: String): String {
+        require(matches(profile, revision, geo) && !request?.externalUIVersion.isNullOrEmpty())
+        return requireNotNull(api).dashboardAddress()
+    }
     fun select(profile: String, revision: String, geo: String, group: String, node: String, reset: String) {
         require(matches(profile, revision, geo))
         val client = requireNotNull(api)
@@ -103,6 +108,29 @@ class VpnController(private val context: Context) {
     }
     internal fun refresh(client: CoreApi) {
         val entries = client.call("/proxies").getJSONObject("proxies")
+        // /proxies includes configured proxies/groups, but HTTP provider leaves
+        // are exposed separately. Only members referenced by the live groups
+        // join this session snapshot; never reuse an offline provider projection.
+        val missing = buildSet {
+            entries.keys().asSequence().filterNot { it.startsWith("__jeemi_dns_") }.forEach { name ->
+                val all = entries.getJSONObject(name).optJSONArray("all")
+                if (all != null) repeat(all.length()) {
+                    val member = all.getString(it)
+                    if (!entries.has(member) && !member.startsWith("__jeemi_dns_")) add(member)
+                }
+            }
+        }
+        if (missing.isNotEmpty()) {
+            val providers = runCatching { client.call("/providers/proxies").getJSONObject("providers") }.getOrNull()
+            providers?.keys()?.asSequence()?.forEach { name ->
+                val proxies = providers.getJSONObject(name).optJSONArray("proxies")
+                if (proxies != null) repeat(proxies.length()) {
+                    val proxy = proxies.getJSONObject(it)
+                    val member = proxy.optString("name")
+                    if (member in missing && !entries.has(member)) entries.put(member, proxy)
+                }
+            }
+        }
         val previous = live.value ?: return
         live.update { current ->
             if (api !== client || current == null || current.revision != previous.revision) current
@@ -137,6 +165,8 @@ internal fun preferredSelection(members: List<String>, saved: String?, default: 
     saved?.takeIf { it in members } ?: default?.takeIf { it in members } ?: members.firstOrNull()
 
 internal class CoreApi(private val port: Int, private val secret: String) {
+    internal fun dashboardAddress(): String =
+        "http://127.0.0.1:$port/ui/#/setup?protocol=http&hostname=127.0.0.1&port=$port&disableUpgradeCore=1&disableTunMode=1&secret=" + encode(secret)
     internal fun open(path: String, timeout: Int): HttpURLConnection =
         (URL("http://127.0.0.1:" + port + path).openConnection(Proxy.NO_PROXY) as HttpURLConnection).apply {
             connectTimeout = 3000; readTimeout = timeout; instanceFollowRedirects = false

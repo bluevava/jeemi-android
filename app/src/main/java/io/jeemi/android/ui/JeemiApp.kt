@@ -196,6 +196,8 @@ fun JeemiApp(state: AppState, model: JeemiViewModel) {
                 AppError.NETWORK -> R.string.network_error
                 AppError.EXPORT -> R.string.export_error
                 AppError.CORE -> R.string.core_error
+                AppError.DASHBOARD -> R.string.dashboard_error
+                AppError.SCRIPT_DOWNLOAD -> R.string.script_download_error
             })) }, confirmButton = { TextButton(onClick = model::dismissError, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.close)) } })
     }
 }

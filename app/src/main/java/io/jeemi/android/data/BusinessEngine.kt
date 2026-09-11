@@ -131,7 +131,9 @@ class GoBusinessEngine : BusinessEngine {
         val fallback = result.getJSONObject("fallback")
         val selected = fallback.getJSONObject("selection")
         val providers = result.getJSONArray("providers")
-        return Candidate(result.getString("yaml"), decodeStructure(result.getJSONObject("structure")),
+        val yaml = Mobile.androidDashboardConfiguration(result.getString("yaml"),
+            normalized.externalUIVersion.takeIf { normalized.externalUIEnabled }.orEmpty())
+        return Candidate(yaml, decodeStructure(result.getJSONObject("structure")),
             List(providers.length()) { i -> providers.getJSONObject(i).let {
                 RuleProvider(it.getString("name"), it.optString("type"), it.optString("behavior")) } },
             fallback.getJSONArray("selectors").strings(), fallback.optString("originalTarget"),
@@ -143,8 +145,8 @@ class GoBusinessEngine : BusinessEngine {
 
 internal fun JSONArray?.strings(): List<String> = this?.let { array -> List(array.length()) { array.getString(it) } } ?: emptyList()
 internal fun LocalResource.toJson() = JSONObject().put("id", id).put("name", name).put("kind", kind.name)
-    .put("content", content).put("strategy", strategy).put("description", description).put("formatVersion", formatVersion)
+    .put("content", content).put("strategy", strategy).put("description", description).put("formatVersion", formatVersion).put("sourceUrl", sourceUrl)
 internal fun List<LocalResource>.toJson() = JSONArray().apply { this@toJson.forEach { put(it.toJson()) } }
 internal fun resourceFromJson(json: JSONObject) = LocalResource(json.getString("id"), json.getString("name"),
     ResourceKind.valueOf(json.getString("kind")), json.getString("content"), json.optString("strategy", "auto"),
-    json.optInt("formatVersion", 1), json.optString("description"))
+    json.optInt("formatVersion", 1), json.optString("description"), json.optString("sourceUrl"))

@@ -27,6 +27,14 @@ import java.util.UUID
 
 @Composable
 fun ConfigurationScreen(state: AppState, model: JeemiViewModel, modifier: Modifier) {
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, model) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) model.cancelResourceNetwork()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer); model.cancelResourceNetwork() }
+    }
     var kind by rememberSaveable { mutableStateOf(ResourceKind.CONFIG) }
     var chainPage by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -67,7 +75,11 @@ fun ConfigurationScreen(state: AppState, model: JeemiViewModel, modifier: Modifi
                         Text(stringResource(R.string.associated_count, count), style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    IconButton(onClick = { model.openResource(item) }, enabled = !state.busy) { Icon(Icons.Outlined.Edit, stringResource(R.string.edit)) }
+                    if (item.kind == ResourceKind.SCRIPT && item.sourceUrl.isNotEmpty())
+                        IconButton(onClick = { model.refreshScript(item.id) }, enabled = !state.busy && !state.resourceDownloading) {
+                            Icon(Icons.Outlined.Refresh, stringResource(R.string.redownload_script))
+                        }
+                    IconButton(onClick = { model.openResource(item) }, enabled = !state.busy && !state.resourceDownloading) { Icon(Icons.Outlined.Edit, stringResource(R.string.edit)) }
                     IconButton(onClick = { deleteId = item.id }, enabled = !state.busy) { Icon(Icons.Outlined.DeleteOutline, stringResource(R.string.delete)) }
                 }
                 if (item.description.isNotBlank()) Text(item.description, style = MaterialTheme.typography.bodySmall)
@@ -81,7 +93,7 @@ fun ConfigurationScreen(state: AppState, model: JeemiViewModel, modifier: Modifi
                 OutlinedButton(onClick = { chooseGroupKind = false; model.openResource(newResource(ResourceKind.GROUPS, value)) }, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) { Text(stringResource(label)) }
             }
         } }, confirmButton = { TextButton(onClick = { chooseGroupKind = false }, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.cancel)) } })
-    editing?.let { ResourceEditor(it, state, model) }
+    editing?.let { ResourceEditor(it, state.copy(busy = state.busy || state.resourceDownloading), model) }
     deleteId?.let { id -> AlertDialog(onDismissRequest = { deleteId = null }, title = { Text(stringResource(R.string.delete_resource)) },
         text = { Text(stringResource(R.string.delete_resource_note)) }, dismissButton = { TextButton(onClick = { deleteId = null }, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.cancel)) } },
         confirmButton = { TextButton(onClick = { model.removeResource(id); deleteId = null }, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.delete)) } }) }
@@ -121,6 +133,7 @@ internal fun newResource(kind: ResourceKind, groupKind: String = "selector"): Lo
 
 @Composable
 private fun ResourceEditor(draft: LocalResource, state: AppState, model: JeemiViewModel) {
+    val scriptInput by model.scriptInput.collectAsState()
     var testProfile by rememberSaveable(draft.id) { mutableStateOf(state.library.selectedId ?: "") }
     var fieldPicker by rememberSaveable(draft.id) { mutableStateOf(false) }
     var fieldPath by rememberSaveable(draft.id) { mutableStateOf<String?>(null) }
@@ -132,8 +145,8 @@ private fun ResourceEditor(draft: LocalResource, state: AppState, model: JeemiVi
         model.fieldDraft.value = entry?.optString("valueYaml")?.trimEnd() ?: field.example.trimEnd()
         fieldPath = field.path
     }
-    EditorDialog(stringResource(draft.kind.label), state.busy, model::closeResource, help = draft.kind.help, footer = {
-        Button(onClick = model::saveResource, enabled = !state.busy && draft.name.isNotBlank(), shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.save)) }
+    EditorDialog(stringResource(draft.kind.label), state.busy, model::closeResource, help = if (draft.kind == ResourceKind.SCRIPT) ScriptSourceHelp else draft.kind.help, footer = {
+        Button(onClick = model::saveResource, enabled = !state.busy && !state.resourceDownloading && draft.name.isNotBlank(), shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.save)) }
     }) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             OutlinedTextField(draft.name, { update(draft.copy(name = it.take(80))) }, Modifier.fillMaxWidth(), enabled = !state.busy,
@@ -152,9 +165,20 @@ private fun ResourceEditor(draft: LocalResource, state: AppState, model: JeemiVi
                 if (draft.kind != ResourceKind.SCRIPT) ChoiceField(stringResource(R.string.composition_strategy), draft.strategy,
                     (if (draft.kind == ResourceKind.CONFIG) listOf("auto", "replace") else listOf("auto", "prepend", "append", "replace"))
                         .map { it to stringResource(strategyLabel(it)) }, !state.busy) { update(draft.copy(strategy = it)) }
-                OutlinedTextField(draft.content, { update(draft.copy(content = it)) }, Modifier.fillMaxWidth(), enabled = !state.busy,
-                    label = { Text(stringResource(R.string.resource_content)) }, minLines = 12,
+                OutlinedTextField(if (draft.kind == ResourceKind.SCRIPT) scriptInput else draft.content,
+                    { if (draft.kind == ResourceKind.SCRIPT) model.scriptInput.value = it else update(draft.copy(content = it)) },
+                    Modifier.fillMaxWidth(), enabled = !state.busy && !state.resourceDownloading,
+                    label = { Text(stringResource(if (draft.kind == ResourceKind.SCRIPT) R.string.script_source_input else R.string.resource_content)) },
+                    minLines = if (draft.kind == ResourceKind.SCRIPT && isScriptUrl(scriptInput)) 2 else 12,
                     textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
+                if (draft.kind == ResourceKind.SCRIPT && draft.sourceUrl.isNotEmpty() && scriptInput.trim() == draft.sourceUrl)
+                    CollapsibleCard(stringResource(R.string.cached_script), ScriptSourceHelp) {
+                        Text(draft.content.take(65536), style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
+                    }
+                if (state.resourceDownloading) Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    TextButton(onClick = model::cancelResourceNetwork, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.cancel)) }
+                }
             } else when (draft.kind) {
                 ResourceKind.CONFIG -> {
                     RoutingPlanEditor(draft, state, model)

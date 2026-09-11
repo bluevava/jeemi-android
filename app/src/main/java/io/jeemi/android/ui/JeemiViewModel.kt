@@ -5,6 +5,7 @@ package io.jeemi.android.ui
 
 import android.app.Application
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.jeemi.android.JeemiApplication
@@ -23,7 +24,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.util.UUID
 
-enum class AppError { LOAD, IMPORT, SAVE, PREVIEW, RESOURCE, NETWORK, EXPORT, CORE }
+enum class AppError { LOAD, IMPORT, SAVE, PREVIEW, RESOURCE, NETWORK, EXPORT, CORE, DASHBOARD, SCRIPT_DOWNLOAD }
 data class AppState(
     val library: Library = Library(), val loaded: Boolean = false,
     val busy: Boolean = false, val error: AppError? = null,
@@ -41,6 +42,7 @@ data class AppState(
     val chainFailures: List<ChainFailure> = emptyList(), val businessIssue: BusinessIssue? = null,
     val conversionReport: String? = null,
     val chainComposition: String? = null,
+    val resourceDownloading: Boolean = false, val dashboardDownloading: Boolean = false,
 )
 internal val AppState.geoRevision: String get() = geo.joinToString(":") { it.sha256 }
 data class PackagePreview(val resources: List<LocalResource>, val target: LocalResource,
@@ -55,6 +57,19 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
     // Large documents stay out of the saved-state Bundle.
     val importDraft = MutableStateFlow("")
     val editingResource = MutableStateFlow<LocalResource?>(null)
+    val scriptInput = MutableStateFlow("")
+    val selectorPaths = MutableStateFlow<Map<List<String>, List<String>>>(emptyMap())
+    fun setSelectorPath(key: List<String>, names: List<String>) {
+        val retained = selectorPaths.value.filterKeys { it != key }.entries.toList().takeLast(127).associate { it.toPair() }
+        selectorPaths.value = retained + (key to names)
+    }
+    private var editingOriginal: LocalResource? = null
+    private var resourceNetwork: Job? = null
+    private var resourceRequest: mobile.ResourceDownload? = null
+    private var resourceGeneration = 0
+    private var dashboardNetwork: Job? = null
+    private var dashboardRequest: mobile.ResourceDownload? = null
+    private var dashboardGeneration = 0
     val runtimeDraft = MutableStateFlow<String?>(null)
     val runtimeTextDraft = MutableStateFlow<Map<String, String>>(emptyMap())
     val runtimeIssue = MutableStateFlow<RuntimeDraftIssue?>(null)
@@ -111,7 +126,8 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
             val request = VpnRequest(selected.id, candidate.yaml, JSONObject(current.preferences.runtimeJson).getBoolean("ipv6"),
                 revision = candidate.revision,
                 logLevel = JSONObject(current.preferences.runtimeJson).getString("logLevel"), selections = selected.selections,
-                defaults = candidate.structure.groups.associate { it.name to it.defaultSelected })
+                defaults = candidate.structure.groups.associate { it.name to it.defaultSelected },
+                externalUIVersion = current.preferences.externalUIVersion.takeIf { current.preferences.externalUIEnabled }.orEmpty())
             withContext(Dispatchers.Main) {
                 // Stopping also invalidates a request still being prepared off the UI thread.
                 if (actionRevision != vpnActionRevision) return@withContext
@@ -266,10 +282,73 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
         })
     }
 
-    fun openResource(resource: LocalResource) { editingResource.value = resource }
-    fun closeResource() { editingResource.value = null; fieldDraft.value = "" }
+    fun openResource(resource: LocalResource) {
+        cancelResourceNetwork()
+        editingOriginal = mutableState.value.library.resources.firstOrNull { it.id == resource.id }
+        editingResource.value = resource
+        scriptInput.value = resource.sourceUrl.ifBlank { resource.content }
+    }
+    fun closeResource() { cancelResourceNetwork(); editingResource.value = null; editingOriginal = null; fieldDraft.value = ""; scriptInput.value = "" }
+    fun cancelResourceNetwork() {
+        resourceGeneration++; resourceRequest?.cancel(); resourceNetwork?.cancel()
+        mutableState.value = mutableState.value.copy(resourceDownloading = false)
+    }
+    private fun scriptOperation(error: AppError = AppError.SCRIPT_DOWNLOAD,
+        action: suspend (mobile.ResourceDownload, Int) -> Unit) {
+        if (resourceNetwork?.isActive == true) return
+        val generation = ++resourceGeneration
+        val request = Mobile.newResourceDownload()
+        resourceRequest = request
+        mutableState.value = mutableState.value.copy(resourceDownloading = true, error = null, businessIssue = null)
+        resourceNetwork = viewModelScope.launch {
+            try { action(request, generation) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                if (generation == resourceGeneration && isActive) mutableState.value = mutableState.value.copy(error = error)
+            }
+            finally {
+                request.cancel()
+                if (generation == resourceGeneration) {
+                    resourceRequest = null
+                    mutableState.value = mutableState.value.copy(resourceDownloading = false)
+                }
+            }
+        }
+    }
+    private suspend fun resolveScript(draft: LocalResource, input: String, request: mobile.ResourceDownload,
+        refresh: Boolean = false): LocalResource = withContext(Dispatchers.IO) {
+        if (!isScriptUrl(input)) return@withContext draft.copy(content = input, sourceUrl = "")
+        val address = Mobile.normalizeScriptURL(input)
+        if (!refresh && address == draft.sourceUrl) draft
+        else draft.copy(content = request.script(address), sourceUrl = address)
+    }
+    fun refreshScript(id: String) {
+        val expected = mutableState.value.library.resources.firstOrNull { it.id == id && it.kind == ResourceKind.SCRIPT && it.sourceUrl.isNotEmpty() } ?: return
+        scriptOperation { request, generation ->
+            val prepared = resolveScript(expected, expected.sourceUrl, request, refresh = true)
+            commit(AppError.RESOURCE, valid = { generation == resourceGeneration }) { old ->
+                check(old.resources.firstOrNull { it.id == id } == expected)
+                old.copy(resources = old.resources.replacing(app.engine.prepareTyped(prepared)))
+            }.join()
+        }
+    }
     fun saveResource() {
         val draft = editingResource.value ?: return
+        if (draft.kind == ResourceKind.SCRIPT) {
+            val input = scriptInput.value
+            val expected = editingOriginal
+            scriptOperation { request, generation ->
+                require(draft.name.isNotBlank() && draft.name.length <= 80)
+                val prepared = resolveScript(draft, input, request)
+                commit(AppError.RESOURCE, valid = { generation == resourceGeneration },
+                    onSuccess = { editingResource.value = null; scriptInput.value = ""; editingOriginal = null }) { old ->
+                    check(old.resources.firstOrNull { it.id == draft.id } == expected)
+                    require(old.resources.size < 100 || expected != null)
+                    old.copy(resources = old.resources.replacing(app.engine.prepareTyped(prepared)))
+                }.join()
+            }
+            return
+        }
         commit(AppError.RESOURCE, onSuccess = { editingResource.value = null }) { old ->
             require(draft.name.isNotBlank() && draft.name.length <= 80)
             require(old.resources.size < 100 || old.resources.any { it.id == draft.id })
@@ -311,7 +390,24 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
         }
         editingResource.value = draft.copy(content = content.toString())
     }
-    fun previewResource(subscriptionId: String? = null) = work(AppError.PREVIEW) {
+    fun previewResource(subscriptionId: String? = null) {
+        val draft = editingResource.value ?: return
+        if (draft.kind == ResourceKind.SCRIPT) {
+            val input = scriptInput.value
+            val current = mutableState.value.library
+            scriptOperation(AppError.PREVIEW) { request, _ ->
+                val resolved = resolveScript(draft, input, request)
+                val yaml = withContext(Dispatchers.IO) {
+                    val prepared = app.engine.prepareTyped(resolved.copy(name = resolved.name.ifBlank { "draft" }))
+                    val selected = requireNotNull(current.subscriptions.firstOrNull { it.id == (subscriptionId ?: current.selectedId) })
+                    app.engine.project(selected.copy(handlerId = prepared.id), current.preferences, current.resources.replacing(prepared), current.chainLibrary).yaml
+                }
+                currentCoroutineContext().ensureActive()
+                viewDocument(yaml)
+            }
+            return
+        }
+        work(AppError.PREVIEW) {
         val draft = requireNotNull(editingResource.value)
         val current = mutableState.value.library
         val prepared = app.engine.prepareTyped(draft.copy(name = draft.name.ifBlank { "draft" }))
@@ -319,13 +415,14 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
         val result = app.engine.project(selected.copy(handlerId = prepared.id), current.preferences,
             current.resources.replacing(prepared), current.chainLibrary).yaml
         withContext(Dispatchers.Main) { viewDocument(result) }
+        }
     }
     fun importResourceFile(uri: Uri) = work(AppError.RESOURCE) {
         val draft = requireNotNull(editingResource.value)
         val text = readFile(uri, 16 * 1024 * 1024)
         if (draft.kind == ResourceKind.SCRIPT && !text.trimStart().startsWith("{")) {
             app.engine.prepareTyped(draft.copy(content = text))
-            withContext(Dispatchers.Main) { editingResource.value = draft.copy(content = text) }
+            withContext(Dispatchers.Main) { editingResource.value = draft.copy(content = text, sourceUrl = ""); scriptInput.value = text }
         } else {
             val current = mutableState.value.library
             val result = JSONObject(Mobile.prepareResourceImport(text, draft.toJson().toString(), current.resources.toJson().toString()))
@@ -349,10 +446,24 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
             old.copy(resources = preview.resources)
         }
     }
-    fun exportResource() = work(AppError.EXPORT) {
+    fun exportResource() {
+        val selected = editingResource.value ?: return
+        if (selected.kind == ResourceKind.SCRIPT) {
+            val input = scriptInput.value
+            val resources = mutableState.value.library.resources
+            scriptOperation(AppError.EXPORT) { request, _ ->
+                val draft = resolveScript(selected, input, request)
+                val result = withContext(Dispatchers.IO) { Mobile.exportResourcePackage(draft.toJson().toString(), resources.toJson().toString()) }
+                currentCoroutineContext().ensureActive()
+                viewDocument(result, io.jeemi.android.R.string.resource_package)
+            }
+            return
+        }
+        work(AppError.EXPORT) {
         val draft = requireNotNull(editingResource.value)
         val result = Mobile.exportResourcePackage(draft.toJson().toString(), mutableState.value.library.resources.toJson().toString())
         withContext(Dispatchers.Main) { viewDocument(result, io.jeemi.android.R.string.resource_package) }
+        }
     }
 
     private data class ImportedContent(val text: String, val suggestedName: String = "", val usage: Map<String, Long> = emptyMap())
@@ -439,6 +550,8 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
                         var next = update(previous)
                         if (previous.resources != next.resources) app.engine.validateResources(next.resources)
                         val chainChanges = changedChainGroups(previous.chainLibrary, next.chainLibrary)
+                        val changedScripts = next.resources.filter { it.kind == ResourceKind.SCRIPT &&
+                            previous.resources.firstOrNull { old -> old.id == it.id }?.content != it.content }.map { it.id }.toSet()
                         val compositionChanged = previous.resources != next.resources ||
                             previous.preferences.copy(theme = next.preferences.theme, nodeDensity = next.preferences.nodeDensity,
                                 nodeSort = next.preferences.nodeSort, showHiddenGroups = next.preferences.showHiddenGroups,
@@ -451,12 +564,12 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
                             } else if (compositionChanged || subscription.chainGroupIds.any(chainChanges::contains) ||
                                 subscription != previous.subscriptions.firstOrNull { it.id == subscription.id }) {
                                 val result = app.engine.project(subscription, next.preferences, next.resources, next.chainLibrary)
-                                if (subscription.chainGroupIds.isNotEmpty() && (compositionChanged || subscription.chainGroupIds.any(chainChanges::contains) ||
+                                if (subscription.handlerId in changedScripts || (subscription.chainGroupIds.isNotEmpty() && (compositionChanged || subscription.chainGroupIds.any(chainChanges::contains) ||
                                     previous.subscriptions.firstOrNull { it.id == subscription.id }?.let {
                                         it.original != subscription.original || it.handlerId != subscription.handlerId || it.resourceIds != subscription.resourceIds ||
                                             it.chainGroupIds != subscription.chainGroupIds || it.disabledProviders != subscription.disabledProviders ||
                                             it.fallbackMode != subscription.fallbackMode || it.fallbackSelector != subscription.fallbackSelector
-                                    } != false)) validator.validate(result.yaml)
+                                    } != false))) validator.validate(result.yaml)
                                 subscription.copy(ruleProviderCount = result.providers.size,
                                     fallbackMode = if (result.fallbackReset) "none" else subscription.fallbackMode,
                                     fallbackSelector = if (result.fallbackReset) "" else subscription.fallbackSelector)
@@ -491,7 +604,55 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    override fun onCleared() { cancelChainNetwork(); diagnostics.cancelDns(); activeDownload?.cancel(); icons.cancel(); tests?.cancel(); singleTests.values.toList().forEach { it.cancel() }; super.onCleared() }
+    override fun onCleared() { cancelResourceNetwork(); cancelDashboardDownload(); cancelChainNetwork(); diagnostics.cancelDns(); activeDownload?.cancel(); icons.cancel(); tests?.cancel(); singleTests.values.toList().forEach { it.cancel() }; super.onCleared() }
+
+    fun cancelDashboardDownload() {
+        dashboardGeneration++; dashboardRequest?.cancel(); dashboardNetwork?.cancel()
+        mutableState.value = mutableState.value.copy(dashboardDownloading = false)
+    }
+    fun setExternalUI(enabled: Boolean) {
+        if (!enabled) {
+            cancelDashboardDownload()
+            savePreferences(mutableState.value.library.preferences.copy(externalUIEnabled = false))
+            return
+        }
+        if (dashboardNetwork?.isActive == true) return
+        val generation = ++dashboardGeneration
+        val request = Mobile.newResourceDownload()
+        val version = mutableState.value.library.preferences.externalUIVersion
+        dashboardRequest = request
+        mutableState.value = mutableState.value.copy(dashboardDownloading = true, error = null, businessIssue = null)
+        dashboardNetwork = viewModelScope.launch {
+            try {
+                val installed = withContext(Dispatchers.IO) { request.dashboard(app.noBackupFilesDir.absolutePath, version) }
+                ensureActive()
+                commit(AppError.DASHBOARD, valid = { generation == dashboardGeneration }) {
+                    it.copy(preferences = it.preferences.copy(externalUIEnabled = true, externalUIVersion = installed))
+                }.join()
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                if (generation == dashboardGeneration && isActive) mutableState.value = mutableState.value.copy(error = AppError.DASHBOARD)
+            }
+            finally {
+                request.cancel()
+                if (generation == dashboardGeneration) {
+                    dashboardRequest = null
+                    mutableState.value = mutableState.value.copy(dashboardDownloading = false)
+                }
+            }
+        }
+    }
+    fun openDashboard() {
+        try {
+            val current = mutableState.value
+            check(current.library.preferences.externalUIEnabled)
+            val address = app.runtime.dashboardAddress(current.library.selectedId, current.candidate?.revision, current.geoRevision)
+            // The short-lived secret stays in the local URL fragment, never app
+            // state, persistence, analytics, clipboard or logs.
+            app.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, address.toUri())
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: Exception) { mutableState.value = mutableState.value.copy(error = AppError.DASHBOARD) }
+    }
 
     private fun work(error: AppError, onSuccess: () -> Unit = {}, action: suspend () -> Unit) {
         viewModelScope.launch {

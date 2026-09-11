@@ -20,7 +20,8 @@ type Summary struct {
 
 type Script struct {
 	Summary
-	Contents string `json:"contents"`
+	Contents  string `json:"contents"`
+	SourceURL string `json:"sourceUrl,omitempty"`
 }
 
 type State struct {

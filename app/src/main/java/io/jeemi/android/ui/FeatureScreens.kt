@@ -33,6 +33,14 @@ import io.jeemi.android.ui.components.*
 @Composable
 fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, authorizationPending: Boolean,
     startVpn: () -> Unit, openSubscriptions: (import: Boolean) -> Unit) {
+    val dashboardLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(dashboardLifecycle, model) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) model.cancelDashboardDownload()
+        }
+        dashboardLifecycle.addObserver(observer)
+        onDispose { dashboardLifecycle.removeObserver(observer); model.cancelDashboardDownload() }
+    }
     var editor by rememberSaveable { mutableStateOf<String?>(null) }
     val runtime by model.runtime.collectAsStateWithLifecycle()
     val live by model.live.collectAsStateWithLifecycle()
@@ -41,6 +49,7 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
     val subscriptionAction = stringResource(if (selected == null) R.string.add_subscription else R.string.manage_subscriptions)
     val switchAction = stringResource(if (active) R.string.vpn_stop else R.string.vpn_start)
     val modeLabel = stringResource(R.string.proxy_mode)
+    val externalLabel = stringResource(R.string.external_ui)
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val linkError = stringResource(R.string.about_link_error)
@@ -88,6 +97,28 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
                             enabled = !state.busy, shape = SegmentedButtonDefaults.itemShape(index, 3)) { Text(stringResource(mode.label)) }
                     }
                 }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.external_ui), Modifier.weight(1f))
+                    FeatureHelp(ExternalUIHelp)
+                    Switch(checked = state.library.preferences.externalUIEnabled || state.dashboardDownloading,
+                        onCheckedChange = model::setExternalUI, enabled = !state.busy,
+                        modifier = Modifier.semantics { contentDescription = externalLabel })
+                }
+                if (state.dashboardDownloading) Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Text(stringResource(R.string.dashboard_preparing), style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = model::cancelDashboardDownload, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.cancel)) }
+                }
+                if (state.library.preferences.externalUIEnabled)
+                    OutlinedButton(onClick = model::openDashboard, modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.busy && runtime is RuntimeState.Running && live?.let {
+                            it.profileId == state.library.selectedId && it.revision == state.candidate?.revision && it.geoRevision == state.geoRevision
+                        } == true, shape = MaterialTheme.shapes.small) {
+                        Icon(Icons.Outlined.OpenInBrowser, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.open_zashboard))
+                    }
                 if (state.projectionFailed) Text(stringResource(R.string.candidate_error), color = MaterialTheme.colorScheme.error)
             }
         }

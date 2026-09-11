@@ -22,6 +22,7 @@ type resourceInput struct {
 	ID            string `json:"id"`
 	Name          string `json:"name"`
 	Description   string `json:"description"`
+	SourceURL     string `json:"sourceUrl,omitempty"`
 	Kind          string `json:"kind"`
 	Content       string `json:"content"`
 	Strategy      string `json:"strategy"`
@@ -29,6 +30,16 @@ type resourceInput struct {
 }
 
 func prepareTyped(input resourceInput) (resourceInput, error) {
+	if input.SourceURL != "" {
+		if input.Kind != "SCRIPT" {
+			return input, fmt.Errorf("invalid_resource")
+		}
+		address, err := NormalizeScriptURL(input.SourceURL)
+		if err != nil {
+			return input, err
+		}
+		input.SourceURL = address
+	}
 	if input.FormatVersion < 0 || input.FormatVersion > 2 {
 		return input, fmt.Errorf("unsupported_resource_version")
 	}
@@ -334,7 +345,7 @@ func ExportResourcePackage(resourceJSON, libraryJSON string) (string, error) {
 		return "", err
 	}
 	if p.Kind == "SCRIPT" {
-		pkg := configtransfer.FromScript(localscript.Script{Summary: localscript.Summary{Name: p.Name, Description: p.Description}, Contents: p.Content})
+		pkg := configtransfer.FromScript(localscript.Script{Summary: localscript.Summary{Name: p.Name, Description: p.Description}, Contents: p.Content, SourceURL: p.SourceURL})
 		b, e := configtransfer.Encode(pkg)
 		return string(b), e
 	}
@@ -383,6 +394,7 @@ func PrepareResourceImport(packageJSON, targetJSON, libraryJSON string) (string,
 		target.Name = pkg.Script.Name
 		target.Description = pkg.Script.Description
 		target.Content = pkg.Script.Contents
+		target.SourceURL = pkg.Script.SourceURL
 		target.FormatVersion = 2
 	} else {
 		state, err := resourceState(all)

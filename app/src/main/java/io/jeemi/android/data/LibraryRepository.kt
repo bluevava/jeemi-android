@@ -43,12 +43,14 @@ class LibraryRepository(directory: File) {
                 connectionReset = preferences.optString("connectionReset", "selector"),
                 geoMode = preferences.optString("geoMode", "mmdb"),
                 geoLoader = preferences.optString("geoLoader", "memconservative"),
+                externalUIEnabled = preferences.optBoolean("externalUIEnabled"),
+                externalUIVersion = preferences.optString("externalUIVersion"),
             ),
             resources = json.optJSONArray("resources")?.let { items -> List(items.length()) { i ->
                 val item = items.getJSONObject(i)
                 LocalResource(item.getString("id"), item.getString("name"), ResourceKind.valueOf(item.getString("kind")),
                     item.getString("content"), item.optString("strategy", "auto"),
-                    item.optInt("formatVersion", 1), item.optString("description"))
+                    item.optInt("formatVersion", 1), item.optString("description"), item.optString("sourceUrl"))
             } } ?: emptyList(),
             chainLibrary = mobile.Mobile.normalizeChainLibrary(json.optJSONObject("chainLibrary")?.toString().orEmpty()),
         )
@@ -72,11 +74,12 @@ class LibraryRepository(directory: File) {
                 .put("showHiddenGroups", preferences.showHiddenGroups)
                 .put("runtimeJson", preferences.runtimeJson).put("nodeDensity", preferences.nodeDensity.name)
                 .put("testConcurrency", preferences.testConcurrency).put("connectionReset", preferences.connectionReset)
-                .put("geoMode", preferences.geoMode).put("geoLoader", preferences.geoLoader))
+                .put("geoMode", preferences.geoMode).put("geoLoader", preferences.geoLoader)
+                .put("externalUIEnabled", preferences.externalUIEnabled).put("externalUIVersion", preferences.externalUIVersion))
             .put("resources", JSONArray().apply { library.resources.forEach { item ->
                 put(JSONObject().put("id", item.id).put("name", item.name).put("kind", item.kind.name)
                     .put("content", item.content).put("strategy", item.strategy)
-                    .put("formatVersion", item.formatVersion).put("description", item.description))
+                    .put("formatVersion", item.formatVersion).put("description", item.description).put("sourceUrl", item.sourceUrl))
             } })
             .put("subscriptions", JSONArray().apply { library.subscriptions.forEach { put(encode(it)) } })
         val bytes = json.toString().toByteArray(Charsets.UTF_8)

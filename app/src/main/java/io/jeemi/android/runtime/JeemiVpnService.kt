@@ -86,6 +86,7 @@ class JeemiVpnService : VpnService() {
         var failureCode = "core_failed"
         val root = File(noBackupFilesDir, "sessions").apply { mkdirs() }
         val home = File(root, UUID.randomUUID().toString()).apply { mkdirs() }
+        val cache = Mobile.newProviderCacheSession(home.absolutePath, noBackupFilesDir.absolutePath)
         val connectivity = getSystemService(ConnectivityManager::class.java)
         val networks = java.util.concurrent.CopyOnWriteArrayList<Network>()
         val callback = object : ConnectivityManager.NetworkCallback() {
@@ -100,9 +101,13 @@ class JeemiVpnService : VpnService() {
                 val secret = UUID.randomUUID().toString() + UUID.randomUUID()
                 val choices = org.json.JSONObject(request.defaults + request.selections).toString()
                 val primed = Mobile.primeStartupSelections(request.yaml, choices)
-                val config = Mobile.androidSessionConfiguration(primed, secret, port.toLong(), request.ipv6)
+                if (request.externalUIVersion.isNotEmpty())
+                    Mobile.materializeDashboard(noBackupFilesDir.absolutePath, request.externalUIVersion, home.absolutePath)
+                val androidConfig = Mobile.androidSessionConfiguration(primed, secret, port.toLong(), request.ipv6)
+                val config = Mobile.androidDashboardConfiguration(androidConfig, request.externalUIVersion)
                 val diagnostics = org.json.JSONObject(Mobile.prepareDNSDiagnostics(config, secret))
                 File(home, "config.yaml").writeText(diagnostics.getString("configuration"))
+                cache.prepare()
                 ensureActive()
                 val routes = org.json.JSONObject(Mobile.androidVpnRoutes(primed, request.ipv6, Build.VERSION.SDK_INT < 33))
                 val builder = Builder().setSession(getString(R.string.app_name)).setMtu(1500)
@@ -179,6 +184,7 @@ class JeemiVpnService : VpnService() {
                     if (registered) runCatching { connectivity.unregisterNetworkCallback(callback) }
                     runCatching { core?.stop() }
                     runCatching { tun?.close() }
+                    runCatching { cache.save() }
                     check(home.canonicalFile.parentFile == root.canonicalFile)
                     home.deleteRecursively()
                 }

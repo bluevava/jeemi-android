@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_ui">External UI</string>
+    <string name="open_zashboard">Open zashboard</string>
+    <string name="dashboard_preparing">Preparing zashboard…</string>
+    <string name="dashboard_error">Dashboard operation failed. Check the network and local resources, then start or restart the proxy before opening the panel.</string>
+    <string name="script_download_error">Script download or processing failed. Check the URL, network and JavaScript content. The previous script is retained.</string>
+    <string name="script_source_input">JavaScript source or HTTP(S) URL</string>
+    <string name="redownload_script">Download script again</string>
+    <string name="cached_script">View cached source</string>
+    <string name="open_nested_selector">Browse nested selector %1$s</string>
+    <string name="nested_selectors">Nested selectors</string>
+    <string name="egress_balanced">Per-connection egress</string>
+    <string name="egress_relay">Relay chain</string>
+    <string name="egress_unavailable">Egress unavailable</string>
+    <string name="egress_cycle">Cyclic reference</string>
+    <string name="egress_automatic">Automatic after startup</string>
+    <string name="egress_path">Egress path</string>
+    <string name="help_external_ui_purpose">Use the local zashboard panel in the system browser to manage the current mihomo session.</string>
+    <string name="help_external_ui_scenarios">The first enable downloads and verifies an official GitHub Release. Later enables reuse the installed version. The open button appears below outbound mode. Changing the switch while running takes effect after a restart; resources can be prepared while stopped.</string>
+    <string name="help_external_ui_cautions">The entry connects only to loopback and contains the current session secret. Do not share or bookmark the full URL; reopen from Jeemi after a restart. Panel changes do not persist to Jeemi; restarting uses saved Jeemi settings. A modern browser is required. Leaving Home or entering the background cancels unfinished preparation.</string>
+    <string name="help_script_source_purpose">Save local JavaScript or download source from an HTTP(S) URL into the private library.</string>
+    <string name="help_script_source_scenarios">Paste a script URL into the source editor and save to download it. The script card refresh button downloads it again. Editing the same source, composing candidates and starting the proxy use cached source. Unsaved URLs can be tested. Export includes the source URL and cached code; import uses packaged code offline.</string>
+    <string name="help_script_source_cautions">Scripts must define synchronous main(config), stay within 256 KiB and finish in two seconds, without file or network APIs. Downloads time out after 30 seconds. Cancellation, errors, invalid content and revision conflicts preserve the old script. Saving validates all affected subscriptions and running sessions require a restart. Source URLs may contain credentials; keep exports private. Leaving the page or entering the background cancels downloads; closing help retains the draft.</string>
+    <string name="help_nested_purpose">Browse referenced groups one level at a time and inspect the selected path to the final egress.</string>
+    <string name="help_nested_scenarios">Tap a member card to select it in the current manual selector. The arrow only browses the child group. Use the path buttons to return to an ancestor; referenced hidden groups remain accessible. Headers and group cards show the selected path to the final node independently of the browsed level. Long-press a header to view the complete path.</string>
+    <string name="help_nested_cautions">Offline paths use saved manual choices and configuration defaults, never fabricated live egress. Automatic groups resolve after startup; balancing varies per connection. Automatic members cannot be manually pinned, but browsing and node tests remain available. Search matches real nodes and batch tests use the same results. Invalid or cyclic references stop navigation.</string>
+</resources>

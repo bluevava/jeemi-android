@@ -11,7 +11,7 @@ const val EMPTY_CHAIN_LIBRARY = "{\"version\":1,\"revision\":0,\"groups\":[]}"
 
 data class LocalResource(val id: String, val name: String, val kind: ResourceKind,
     val content: String, val strategy: String = "auto", val formatVersion: Int = 1,
-    val description: String = "")
+    val description: String = "", val sourceUrl: String = "")
 data class ProxyGroup(val name: String, val type: String, val members: List<String>,
     val providers: List<String> = emptyList(), val hidden: Boolean = false, val defaultSelected: String = "",
     val icon: String = "")
@@ -69,6 +69,8 @@ data class Preferences(
     val connectionReset: String = "selector",
     val geoMode: String = "mmdb",
     val geoLoader: String = "memconservative",
+    val externalUIEnabled: Boolean = false,
+    val externalUIVersion: String = "",
 )
 
 data class Library(

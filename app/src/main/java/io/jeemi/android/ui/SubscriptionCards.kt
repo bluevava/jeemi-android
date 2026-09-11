@@ -6,12 +6,16 @@ import android.icu.text.BreakIterator
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import io.jeemi.android.ui.theme.JeemiShapes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -40,22 +44,17 @@ import java.util.Locale
 @Composable
 internal fun SelectorHeader(group: ProxyGroup, choice: String?, live: Boolean, expanded: Boolean,
     icons: SelectorIcons, toggle: () -> Unit) {
-    val (emoji, title) = remember(group.name) { selectorTitle(group.name) }
-    var bitmap by remember(group.icon, icons) { mutableStateOf<Bitmap?>(null) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(group.icon, icons, lifecycle) {
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { bitmap = icons.load(group.icon) }
-    }
+    val (_, title) = remember(group.name) { selectorTitle(group.name) }
+    var showEgress by rememberSaveable(group.name) { mutableStateOf(false) }
+    val egressLabel = stringResource(R.string.egress_path)
     Card(Modifier.fillMaxWidth(), shape = JeemiShapes.Component,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { contentDescription = group.name }
-            .clickable(role = Role.Button, onClick = toggle).padding(horizontal = 10.dp, vertical = 4.dp),
+            .combinedClickable(role = Role.Button, onClick = toggle, onLongClickLabel = egressLabel,
+                onLongClick = { showEgress = true }).padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(24.dp), contentAlignment = Alignment.Center) {
-                val image = bitmap?.takeUnless { it.isRecycled }
-                if (image != null) Image(image.asImageBitmap(), null, Modifier.size(20.dp).testTag("selector-icon-image"))
-                else if (emoji.isEmpty()) Icon(Icons.Outlined.AccountTree, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-                else Text(emoji, fontSize = 20.sp, maxLines = 1)
+                SelectorGroupIcon(group, icons)
             }
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
@@ -72,6 +71,24 @@ internal fun SelectorHeader(group: ProxyGroup, choice: String?, live: Boolean, e
                 stringResource(if (expanded) R.string.collapse else R.string.expand), Modifier.size(20.dp))
         }
     }
+    if (showEgress) AlertDialog(onDismissRequest = { showEgress = false },
+        title = { Text(egressLabel) },
+        text = { Text(choice.orEmpty().ifBlank { "—" }, Modifier.verticalScroll(rememberScrollState())) },
+        confirmButton = { TextButton(onClick = { showEgress = false }, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.close)) } })
+}
+
+@Composable
+internal fun SelectorGroupIcon(group: ProxyGroup, icons: SelectorIcons) {
+    val (emoji, _) = remember(group.name) { selectorTitle(group.name) }
+    var bitmap by remember(group.icon, icons) { mutableStateOf<Bitmap?>(null) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(group.icon, icons, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { bitmap = icons.load(group.icon) }
+    }
+    val image = bitmap?.takeUnless { it.isRecycled }
+    if (image != null) Image(image.asImageBitmap(), null, Modifier.size(20.dp).testTag("selector-icon-image"))
+    else if (emoji.isEmpty()) Icon(Icons.Outlined.AccountTree, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+    else Text(emoji, fontSize = 20.sp, maxLines = 1)
 }
 
 // Only presentation separates a leading emoji; exact group keys stay unchanged.

@@ -53,6 +53,18 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
             if (matching) group.copy(members = live?.proxies?.get(group.name)?.members ?: group.members) else group
         }
     }
+    val groupsByName = remember(groups) { groups.associateBy { it.name } }
+    val choices = remember(matching, live?.proxies, selected?.selections) {
+        if (matching) live?.proxies.orEmpty().mapValues { it.value.now } else selected?.selections.orEmpty()
+    }
+    val paths by model.selectorPaths.collectAsState()
+    LaunchedEffect(groupsByName, selected?.id, preferences.mode, paths) {
+        paths.filterKeys { it.take(2) == listOf(selected?.id.orEmpty(), preferences.mode.name) }.forEach { (key, requested) ->
+            val root = groupsByName[key.last()]
+            val valid = root?.let { selectorPath(it, requested, groupsByName).drop(1).map { group -> group.name } }.orEmpty()
+            if (valid != requested) model.setSelectorPath(key, valid)
+        }
+    }
     val nodeTypes = remember(matching, live?.proxies, state.candidate?.nodes, selected?.nodes, state.structure.groups) {
         val groupNames = state.structure.groups.map { it.name }.toSet()
         if (matching) live?.proxies.orEmpty().filter { (name, proxy) ->
@@ -65,7 +77,13 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
     val visible = remember(groups, preferences.showHiddenGroups, search, nodeTypes) {
         search.filter(groups.filter { !it.hidden || preferences.showHiddenGroups }, nodeTypes.keys)
     }
-    val testTargets = remember(visible, nodeTypes) { nodeTestTargets(visible, nodeTypes.keys) }
+    val testTargets = remember(visible, nodeTypes, search, paths, groupsByName, selected?.id, preferences.mode) {
+        val displayed = if (search.active) visible else visible.map { root ->
+            selectorPath(groupsByName.getValue(root.name),
+                paths[listOf(selected?.id.orEmpty(), preferences.mode.name, root.name)].orEmpty(), groupsByName).last()
+        }
+        nodeTestTargets(displayed, nodeTypes.keys)
+    }
     val fontScale = LocalDensity.current.fontScale
     val columns = when (preferences.nodeDensity) { NodeDensity.LARGE -> 1; NodeDensity.MEDIUM -> 2; NodeDensity.SMALL -> 3 }
         .let { if (fontScale >= 1.7f) 1 else if (fontScale >= 1.25f) minOf(it, 2) else it }
@@ -146,15 +164,21 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
                 EmptyCard(stringResource(if (search.active) R.string.no_results else R.string.no_groups), NodesHelp)
             }
             visible.forEach { group ->
+                val root = groupsByName.getValue(group.name)
+                val pathKey = listOf(selected?.id.orEmpty(), preferences.mode.name, group.name)
+                val path = selectorPath(root, paths[pathKey].orEmpty(), groupsByName)
+                val currentGroup = if (search.active) group else path.last()
                 val expanded = group.name in expandedGroups || search.active
                 item(key = "group-" + group.name) {
-                    SelectorHeader(group,
-                        if (matching) live?.proxies?.get(group.name)?.now else selected?.selections?.get(group.name), matching, expanded, model.selectorIcons) {
+                    SelectorHeader(root, egressText(selectorEgress(root, groupsByName, choices, matching)), matching, expanded, model.selectorIcons) {
                         expandedGroups = if (group.name in expandedGroups) expandedGroups - group.name else expandedGroups + group.name
                     }
                 }
                 if (expanded) {
-                    val members = group.members.let { names ->
+                    if (!search.active && (path.size > 1 || currentGroup.members.any { it in groupsByName })) item(key = "path-" + group.name) {
+                        SelectorBreadcrumb(path) { model.setSelectorPath(pathKey, it) }
+                    }
+                    val members = currentGroup.members.let { names ->
                         when (preferences.nodeSort) {
                             NodeSort.NAME -> names.sortedBy { it.lowercase() }
                             NodeSort.TYPE -> names.sortedWith(compareBy({ node -> nodeTypes[node].orEmpty() }, { it }))
@@ -162,26 +186,35 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
                             else -> names
                         }
                     }
-                    items(members.chunked(columns)) { row ->
+                    items(members.chunked(columns).withIndex().toList(),
+                        key = { "members-${group.name.length}:${group.name}-${currentGroup.name.length}:${currentGroup.name}-${it.index}" }) { (_, row) ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             row.forEach { node ->
-                                val chosen = if (matching) live?.proxies?.get(group.name)?.now == node
-                                    else selected?.selections?.get(group.name) == node
+                                val chosen = selectorChoice(currentGroup, choices, matching) == node
                                 val current = if (matching) live?.proxies?.get(node) else null
+                                val child = groupsByName[node]
+                                if (child != null && !search.active) {
+                                    SelectorGroupCard(child, egressText(selectorEgress(child, groupsByName, choices, matching)), matching, chosen,
+                                        selectable = !state.busy && !runtime.transitioning && currentGroup.type == "select",
+                                        canOpen = path.none { it.name == node }, icons = model.selectorIcons, modifier = Modifier.weight(1f),
+                                        select = { model.selectNode(currentGroup.name, node) },
+                                        open = { model.setSelectorPath(pathKey, path.drop(1).map { it.name } + node) })
+                                } else {
                                 val type = nodeTypes[node] ?: current?.type ?: groups.firstOrNull { it.name == node }?.type
                                     ?: node.takeIf { it in builtinProxyNames }.orEmpty()
                                 ProxyNodeCard(node, type, current?.delay, columns, chosen,
-                                    selectable = !state.busy && !runtime.transitioning && group.type == "select",
+                                    selectable = !state.busy && !runtime.transitioning && currentGroup.type == "select",
                                     testable = matching && !state.testing && current != null && current.members.isEmpty() &&
                                         current.type.lowercase() !in listOf("direct", "reject", "pass"),
                                     testing = node in state.testingNodes, modifier = Modifier.weight(1f),
-                                    select = { model.selectNode(group.name, node) }, test = { model.testNode(node) })
+                                    select = { model.selectNode(currentGroup.name, node) }, test = { model.testNode(node) })
+                                }
                             }
                             repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
-                    if (group.providers.isNotEmpty()) item {
-                        Text(group.providers.joinToString(" · "), style = MaterialTheme.typography.labelSmall,
+                    if (currentGroup.providers.isNotEmpty()) item {
+                        Text(currentGroup.providers.joinToString(" · "), style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 12.dp))
                     }
                 }

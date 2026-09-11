@@ -18,10 +18,11 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.Base64
 
-/** Optional, process-local thumbnails. Group names and candidate revisions never change. */
+/** Optional thumbnails. Group names and candidate revisions never change. */
 internal class SelectorIcons(
     private val fetch: suspend (String) -> Bitmap? = ::fetchSelectorIcon,
     private val clock: () -> Long = SystemClock::elapsedRealtime,
+    private val store: SelectorIconStore? = null,
 ) {
     private data class Entry(val bitmap: Bitmap?, val retryAfter: Long)
     private val cache = LruCache<String, Entry>(64)
@@ -41,8 +42,13 @@ internal class SelectorIcons(
             }
             if (clock() < pausedUntil) return@withLock null
             try {
+                store?.read(url)?.let { bitmap ->
+                    cache.put(url, Entry(bitmap, 0))
+                    return@withLock bitmap
+                }
                 val bitmap = fetch(url)
                 ensureActive()
+                bitmap?.let { store?.write(url, it) }
                 cache.put(url, Entry(bitmap, clock() + 60_000))
                 bitmap
             } catch (cancelled: CancellationException) {
