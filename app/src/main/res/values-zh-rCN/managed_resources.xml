@@ -15,14 +15,14 @@
     <string name="egress_unavailable">出口未知</string>
     <string name="egress_cycle">循环引用</string>
     <string name="egress_automatic">启动后自动选择</string>
-    <string name="egress_path">出站路径</string>
+    <string name="egress_node">出口节点</string>
     <string name="help_external_ui_purpose">在系统浏览器中使用本机 zashboard 面板管理当前 mihomo 会话。</string>
     <string name="help_external_ui_scenarios">首次开启时从官方 GitHub Release 下载并校验资源，以后复用已下载版本。开启后，出站方式下方出现打开面板按钮。代理运行时修改开关需要重启生效；尚未启动时可以先准备资源。</string>
     <string name="help_external_ui_cautions">入口仅连接本机回环地址，携带当前会话密钥，请勿分享或收藏完整链接；代理重启后从 Jeemi 重新打开。面板中的临时选点和配置不写回 Jeemi，重启采用 Jeemi 已保存设置。浏览器需支持现代网页标准，旧系统自带浏览器可能需要更新。离开主页或进入后台会取消未完成的资源准备。</string>
     <string name="help_script_source_purpose">保存本地 JavaScript，或从 HTTP(S) 链接下载源码后保存到私有资源库。</string>
     <string name="help_script_source_scenarios">在源码框粘贴脚本链接，保存时下载；脚本卡片刷新按钮可重新下载。编辑相同来源、生成候选、启动代理均复用本地源码，不自动联网。未保存链接也可以测试候选；URL 脚本导出包含来源和缓存源码，导入直接使用包内源码。</string>
     <string name="help_script_source_cautions">脚本须定义同步 main(config)，最多 256 KiB，执行限时 2 秒，无文件或网络 API。下载限时 30 秒，取消、失败、内容无效或修订冲突不覆盖旧脚本；保存会验证所有受影响订阅，运行中的修改待重启生效。来源可能含凭据，请妥善保管导出包。离页或进入后台取消下载，关闭帮助保留编辑草稿。</string>
-    <string name="help_nested_purpose">逐层浏览选择器引用的子组，并查看完整的选择器与最终出口路径。</string>
-    <string name="help_nested_scenarios">点击成员卡片为当前手动选择器选点；右侧箭头只进入子组，不改变选择。顶部路径可返回上层，隐藏组也可沿引用进入。收缩标题和子组卡片沿实际选择显示“下级选择器 · 最终节点”，与当前浏览层级无关。长按标题可查看完整路径。</string>
-    <string name="help_nested_cautions">离线只显示手动预选及配置默认值，不伪造运行出口；自动组须启动后确定，负载均衡按连接分配。自动组不能手动选内部节点，但可浏览和测速。搜索仅匹配真实节点，批量测速使用同一结果；循环或失效引用会停止展开。</string>
+    <string name="help_nested_purpose">使用与代理节点相同的两行卡片浏览嵌套选择器，并查看最终出口节点及其延迟。</string>
+    <string name="help_nested_scenarios">卡片第一行显示子组名称，第二行显示类型和当前最终出口节点的延迟。有效 icon 图片在名称前以相同字号显示；没有图片或加载失败时直接显示原名。点击卡片为当前手动选择器选点；点击延迟标签只进入子组，不触发测速或选点。进入子组后才显示返回路径，隐藏组也可沿引用进入。选择器标题只显示最终出口名称，长按查看完整名称。</string>
+    <string name="help_nested_cautions">延迟只取匹配活动会话中最终节点的测量值；没有测量、已停止、待应用配置或无法确定出口时显示“—”，仍可点击标签浏览。自动组不能手动选内部节点，负载均衡不伪造固定出口。搜索仅匹配真实节点，批量测速使用同一结果；循环或失效引用会停止展开。</string>
 </resources>

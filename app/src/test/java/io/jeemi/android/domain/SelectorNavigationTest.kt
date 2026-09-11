@@ -39,4 +39,14 @@ class SelectorNavigationTest {
         assertTrue(NodeNameSearch("Hidden").filter(listOf(root, child), setOf("HK", "JP")).isEmpty())
         assertEquals(listOf("HK"), nodeTestTargets(NodeNameSearch("h").filter(listOf(root, child), setOf("HK", "JP")), setOf("HK", "JP")))
     }
+    @Test fun terminalNodeExcludesIntermediateGroupsAndUnresolvedExits() {
+        assertEquals("JP", selectorEgress(root, groups, mapOf("Root" to "Hidden", "Hidden" to "JP"), true).nodeName)
+        assertEquals("HK", selectorEgress(root, groups, emptyMap(), false).nodeName)
+        val automatic = child.copy(type = "url-test")
+        assertEquals("JP", selectorEgress(root, groups + ("Hidden" to automatic),
+            mapOf("Root" to "Hidden", "Hidden" to "JP"), true).nodeName)
+        for (end in EgressEnd.entries.filter { it != EgressEnd.NODE }) {
+            assertNull(SelectorEgress(listOf("Hidden"), end).nodeName)
+        }
+    }
 }

@@ -46,7 +46,7 @@ internal fun SelectorHeader(group: ProxyGroup, choice: String?, live: Boolean, e
     icons: SelectorIcons, toggle: () -> Unit) {
     val (_, title) = remember(group.name) { selectorTitle(group.name) }
     var showEgress by rememberSaveable(group.name) { mutableStateOf(false) }
-    val egressLabel = stringResource(R.string.egress_path)
+    val egressLabel = stringResource(R.string.egress_node)
     Card(Modifier.fillMaxWidth(), shape = JeemiShapes.Component,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { contentDescription = group.name }
@@ -80,15 +80,20 @@ internal fun SelectorHeader(group: ProxyGroup, choice: String?, live: Boolean, e
 @Composable
 internal fun SelectorGroupIcon(group: ProxyGroup, icons: SelectorIcons) {
     val (emoji, _) = remember(group.name) { selectorTitle(group.name) }
-    var bitmap by remember(group.icon, icons) { mutableStateOf<Bitmap?>(null) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(group.icon, icons, lifecycle) {
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { bitmap = icons.load(group.icon) }
-    }
-    val image = bitmap?.takeUnless { it.isRecycled }
+    val image = rememberSelectorIcon(group.icon, icons)
     if (image != null) Image(image.asImageBitmap(), null, Modifier.size(20.dp).testTag("selector-icon-image"))
     else if (emoji.isEmpty()) Icon(Icons.Outlined.AccountTree, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
     else Text(emoji, fontSize = 20.sp, maxLines = 1)
+}
+
+@Composable
+internal fun rememberSelectorIcon(address: String, icons: SelectorIcons): Bitmap? {
+    var bitmap by remember(address, icons) { mutableStateOf<Bitmap?>(null) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(address, icons, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { bitmap = icons.load(address) }
+    }
+    return bitmap?.takeUnless { it.isRecycled }
 }
 
 // Only presentation separates a leading emoji; exact group keys stay unchanged.

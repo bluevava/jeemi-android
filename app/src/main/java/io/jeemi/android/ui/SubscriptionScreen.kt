@@ -57,6 +57,12 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
     val choices = remember(matching, live?.proxies, selected?.selections) {
         if (matching) live?.proxies.orEmpty().mapValues { it.value.now } else selected?.selections.orEmpty()
     }
+    fun memberDelay(name: String): Int? {
+        if (!matching) return null
+        val child = groupsByName[name]
+        val leaf = if (child == null) name else selectorEgress(child, groupsByName, choices, true).nodeName
+        return leaf?.let { live?.proxies?.get(it)?.delay }
+    }
     val paths by model.selectorPaths.collectAsState()
     LaunchedEffect(groupsByName, selected?.id, preferences.mode, paths) {
         paths.filterKeys { it.take(2) == listOf(selected?.id.orEmpty(), preferences.mode.name) }.forEach { (key, requested) ->
@@ -175,14 +181,14 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
                     }
                 }
                 if (expanded) {
-                    if (!search.active && (path.size > 1 || currentGroup.members.any { it in groupsByName })) item(key = "path-" + group.name) {
+                    if (!search.active && path.size > 1) item(key = "path-" + group.name) {
                         SelectorBreadcrumb(path) { model.setSelectorPath(pathKey, it) }
                     }
                     val members = currentGroup.members.let { names ->
                         when (preferences.nodeSort) {
                             NodeSort.NAME -> names.sortedBy { it.lowercase() }
                             NodeSort.TYPE -> names.sortedWith(compareBy({ node -> nodeTypes[node].orEmpty() }, { it }))
-                            NodeSort.DELAY -> if (matching) names.sortedBy { live?.proxies?.get(it)?.delay?.takeIf { delay -> delay > 0 } ?: Int.MAX_VALUE } else names
+                            NodeSort.DELAY -> if (matching) names.sortedBy { memberDelay(it)?.takeIf { delay -> delay > 0 } ?: Int.MAX_VALUE } else names
                             else -> names
                         }
                     }
@@ -194,9 +200,9 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
                                 val current = if (matching) live?.proxies?.get(node) else null
                                 val child = groupsByName[node]
                                 if (child != null && !search.active) {
-                                    SelectorGroupCard(child, egressText(selectorEgress(child, groupsByName, choices, matching)), matching, chosen,
+                                    SelectorGroupCard(child, memberDelay(node), columns, chosen,
                                         selectable = !state.busy && !runtime.transitioning && currentGroup.type == "select",
-                                        canOpen = path.none { it.name == node }, icons = model.selectorIcons, modifier = Modifier.weight(1f),
+                                        canOpen = path.none { it.name == node }, modifier = Modifier.weight(1f), icons = model.selectorIcons,
                                         select = { model.selectNode(currentGroup.name, node) },
                                         open = { model.setSelectorPath(pathKey, path.drop(1).map { it.name } + node) })
                                 } else {

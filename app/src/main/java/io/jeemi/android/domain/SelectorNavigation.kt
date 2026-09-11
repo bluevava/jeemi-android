@@ -3,7 +3,9 @@ package io.jeemi.android.domain
 // Adapted from desktop selectorNavigation.ts / selectorEgress.ts. Navigation
 // never mutates a selection; egress always follows the complete snapshot.
 internal enum class EgressEnd { NODE, BALANCED, RELAY, UNAVAILABLE, CYCLE, AUTOMATIC }
-internal data class SelectorEgress(val names: List<String>, val end: EgressEnd)
+internal data class SelectorEgress(val names: List<String>, val end: EgressEnd) {
+    val nodeName: String? get() = names.lastOrNull().takeIf { end == EgressEnd.NODE }
+}
 
 internal fun selectorPath(root: ProxyGroup, requested: List<String>, groups: Map<String, ProxyGroup>): List<ProxyGroup> {
     val path = mutableListOf(root)
