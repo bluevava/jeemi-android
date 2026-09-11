@@ -5,8 +5,8 @@ plugins {
 }
 
 // 应用版本：每次发布更新版本名称，并递增内部版本编号。
-val appVersionName = "0.1.3"
-val appVersionCode = 4
+val appVersionName = "0.1.4"
+val appVersionCode = 5
 
 val buildEngine by tasks.registering(Exec::class) {
     group = "build"
