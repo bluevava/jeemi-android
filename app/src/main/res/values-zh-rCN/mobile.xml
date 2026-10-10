@@ -37,7 +37,7 @@
     <string name="none_items">无</string>
     <string name="test_profile">测试订阅</string>
     <string name="test_candidate">测试候选</string>
-    <string name="field_locked">由主页或规则方案管理</string>
+    <string name="field_locked">已锁定</string>
     <string name="field_conflict">重名处理</string>
     <string name="conflict_error">拒绝冲突</string>
     <string name="conflict_local">本地优先</string>
@@ -128,10 +128,10 @@
     <string name="help_display_scenarios">大、中、小默认分别每行一、二、三个节点；大字体会自动减少列数。</string>
     <string name="help_display_cautions">延迟及当前节点只来自匹配的运行会话。离线候选不会显示虚构测速结果。</string>
     <string name="help_package_purpose">导入或导出桌面版 Jeemi 的版本化 JSON 资源包，携带本地配置及完整依赖，或单个脚本。</string>
-    <string name="help_package_scenarios">分享规则方案时使用资源包；导入预览列出新增、覆盖及受影响订阅。</string>
+    <string name="help_package_scenarios">分享规则方案时使用资源包；导入预览列出新增、覆盖及受影响订阅。导入会打开系统文件选择页；不选文件时，从屏幕左边缘向右滑或从右边缘向左滑，使用系统返回手势取消；三键导航请点系统返回键。取消后回到编辑页，保留当前草稿。</string>
     <string name="help_package_cautions">确认后仅在全部受影响订阅校验通过时一次保存；库变化需要重新预览。桌面兼容包只导出启用的自定义字段，停用字段的草稿保留在本机。</string>
     <string name="help_appearance_purpose">选择浅色、深色或跟随系统的主题，以及应用语言。</string>
-    <string name="help_appearance_scenarios">这些设置应用于四个页面。保存后生效，取消保留之前的选择。</string>
+    <string name="help_appearance_scenarios">主题直接在主页切换，自动保存后立即生效。语言在设置中编辑，保存生效，取消保留之前的选择。</string>
     <string name="help_appearance_cautions">修改主题和语言会保留资源库；语言也支持 Android 的应用语言设置。</string>
     <string name="add_subscription">添加订阅</string>
     <string name="vpn_quick_start">启动代理</string>

@@ -24,7 +24,7 @@ private data class RuntimeField(val key: String, val path: String, val label: In
     val options: List<String> = emptyList(), val enable: String? = null, val merge: String? = null) {
     val fragment get() = if (key == "lanBypassRules") "rules.lan-bypass" else path.removePrefix("/").replace('/', '.')
     fun text(values: JSONObject): String = if (type == "list") values.optJSONArray(key)?.let { array ->
-        (0 until array.length()).joinToString("\n") { "- " + JSONObject.quote(array.getString(it)) }
+        runtimeStringSequence((0 until array.length()).map { array.getString(it) })
     }.orEmpty() else values.optString(key)
 }
 private val RuntimeFields = mapOf(
@@ -57,13 +57,20 @@ private val RuntimeFields = mapOf(
     "lan" to listOf(RuntimeField("lanBypassRules", "/rules", R.string.lan_rules, "list")),
 )
 
-private val ResolverPresets = listOf("114.114.114.114", "223.5.5.5", "https://dns.alidns.com/dns-query",
+internal val RuntimeResolverPresets = listOf("114.114.114.114", "223.5.5.5", "https://dns.alidns.com/dns-query",
     "https://doh.pub/dns-query", "https://1.1.1.1/dns-query", "https://dns.google/dns-query")
 
 private fun RuntimeField.help(): HelpContent {
     val policy = when {
+        key == "listenPort" -> R.string.runtime_port_input_help
+        key == "dnsListen" -> R.string.runtime_dns_listen_input_help
+        key == "dnsFakeIpRange" -> R.string.runtime_ipv4_input_help
+        key == "dnsFakeIpRange6" -> R.string.runtime_ipv6_input_help
         enable == null && type != "list" -> R.string.runtime_forced_help
         key == "lanBypassRules" -> R.string.runtime_lan_help
+        key == "dnsProxyServerNameservers" -> R.string.runtime_proxy_resolver_help
+        key == "dnsFakeIpFilter" -> R.string.runtime_filter_input_help
+        key == "hostsYaml" -> R.string.runtime_hosts_input_help
         type == "yaml" -> R.string.runtime_mapping_help
         key == "dnsNameservers" -> R.string.runtime_nameserver_help
         else -> R.string.runtime_list_help
@@ -103,8 +110,8 @@ internal fun RuntimeEditor(section: String, state: AppState, model: JeemiViewMod
                         FeatureHelp(field.help())
                         if (field.enable != null || field.type == "boolean") {
                             val key = field.enable ?: field.key
-                            Switch(checked = current.optBoolean(key), onCheckedChange = { model.updateRuntimeValue(key, it) },
-                                enabled = !state.busy, colors = SwitchDefaults.colors(uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                            JeemiSwitch(checked = current.optBoolean(key), onCheckedChange = { model.updateRuntimeValue(key, it) },
+                                enabled = !state.busy,
                                 modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).testTag("runtime-switch-" + key)
                                     .semantics { contentDescription = if (field.enable != null) injectionLabel else label })
                         }
@@ -112,19 +119,14 @@ internal fun RuntimeEditor(section: String, state: AppState, model: JeemiViewMod
                     if (enabled && field.type != "boolean") {
                         field.merge?.let { key ->
                             val strategyLabel = stringResource(R.string.composition_strategy)
-                            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().semantics { contentDescription = strategyLabel }) {
-                                listOf("append" to R.string.runtime_append_unique, "override" to R.string.strategy_override).forEachIndexed { index, choice ->
-                                    SegmentedButton(selected = current.optString(key) == choice.first,
-                                        onClick = { model.updateRuntimeValue(key, choice.first) }, enabled = !state.busy,
-                                        modifier = Modifier.testTag("runtime-" + key + "-" + choice.first),
-                                        shape = SegmentedButtonDefaults.itemShape(index, 2)) { Text(stringResource(choice.second)) }
-                                }
-                            }
+                            SegmentedChoice(strategyLabel, current.optString(key),
+                                listOf("append" to stringResource(R.string.runtime_append_unique), "override" to stringResource(R.string.strategy_override)),
+                                enabled = !state.busy, showLabel = false, optionTagPrefix = "runtime-$key-") { model.updateRuntimeValue(key, it) }
                         }
                         val yaml = field.type in listOf("list", "yaml")
                         val value = if (yaml) texts[field.fragment] ?: field.text(current) else current.optString(field.key)
                         if (field.type == "enum") {
-                            ChoiceField(stringResource(R.string.field_value), value, field.options.map { it to enumLabel(it) }, !state.busy) {
+                            FixedChoiceField(stringResource(R.string.field_value), value, field.options.map { it to enumLabel(it) }, !state.busy) {
                                 model.updateRuntimeValue(field.key, it)
                             }
                         } else {
@@ -135,11 +137,12 @@ internal fun RuntimeEditor(section: String, state: AppState, model: JeemiViewMod
                                 label = { Text(if (yaml) field.fragment else stringResource(R.string.field_value)) },
                                 minLines = if (yaml) 4 else 1, maxLines = if (yaml) 10 else 1, singleLine = !yaml,
                                 textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = if (yaml) FontFamily.Monospace else FontFamily.Default),
-                                keyboardOptions = KeyboardOptions(keyboardType = if (field.type == "number") KeyboardType.Number else KeyboardType.Text))
+                                keyboardOptions = KeyboardOptions(autoCorrectEnabled = false,
+                                    keyboardType = if (field.type == "number") KeyboardType.Number else KeyboardType.Text))
                         }
                         if (yaml) {
                             val presets = when (field.key) {
-                                "dnsNameservers", "dnsProxyServerNameservers" -> ResolverPresets
+                                "dnsNameservers", "dnsProxyServerNameservers" -> RuntimeResolverPresets
                                 "dnsFakeIpFilter" -> defaults.getJSONArray(field.key).let { array -> (0 until array.length()).map { array.getString(it) } }
                                 else -> emptyList()
                             }

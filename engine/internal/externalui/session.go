@@ -13,7 +13,12 @@ import (
 // Materialize uses only installed resources. The core can update its disposable
 // copy without modifying the persistent, verified dashboard.
 func (m *Manager) Materialize(ctx context.Context, version, workspace string) error {
-	if _, err := m.Installed(version); err != nil {
+	if err := m.ensureLocal(ctx, version); err != nil {
+		return err
+	}
+	cacheFiles.Lock()
+	defer cacheFiles.Unlock()
+	if _, err := m.installedContext(ctx, version, true); err != nil {
 		return err
 	}
 	source, err := os.OpenRoot(filepath.Join(m.root, version))
@@ -21,7 +26,12 @@ func (m *Manager) Materialize(ctx context.Context, version, workspace string) er
 		return err
 	}
 	defer source.Close()
-	raw, err := source.ReadFile("metadata.json")
+	file, err := source.Open("metadata.json")
+	if err != nil {
+		return err
+	}
+	raw, err := io.ReadAll(io.LimitReader(file, (1<<20)+1))
+	file.Close()
 	var meta metadata
 	if err != nil || len(raw) > 1<<20 || json.Unmarshal(raw, &meta) != nil {
 		return fmt.Errorf("invalid UI metadata")
@@ -51,7 +61,7 @@ func (m *Manager) Materialize(ctx context.Context, version, workspace string) er
 			input.Close()
 			return err
 		}
-		n, copyErr := io.Copy(output, io.LimitReader(input, size+1))
+		n, copyErr := io.Copy(output, io.LimitReader(contextReader{ctx, input}, size+1))
 		input.Close()
 		closeErr := output.Close()
 		if copyErr != nil {

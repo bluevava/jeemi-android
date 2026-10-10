@@ -48,15 +48,16 @@ type StrategyGroup struct {
 	Policy            PolicyTarget       `json:"policy"`
 
 	// Selector-only fields.
-	Type      string     `json:"type"`
-	Emoji     string     `json:"emoji"`
-	Icon      string     `json:"icon"`
-	URL       string     `json:"url"`
-	Interval  int        `json:"interval"`
-	Tolerance int        `json:"tolerance"`
-	Strategy  string     `json:"strategy"`
-	Lazy      bool       `json:"lazy"`
-	Filter    NodeFilter `json:"filter"`
+	Type                string     `json:"type"`
+	Emoji               string     `json:"emoji"`
+	Icon                string     `json:"icon"`
+	URL                 string     `json:"url"`
+	Interval            int        `json:"interval"`
+	Tolerance           int        `json:"tolerance"`
+	Strategy            string     `json:"strategy"`
+	Lazy                bool       `json:"lazy"`
+	Filter              NodeFilter `json:"filter"`
+	IncludeAllProviders bool       `json:"includeAllProviders,omitempty"`
 
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
@@ -68,6 +69,7 @@ type RuleSet struct {
 	Description string   `json:"description"`
 	SourceType  string   `json:"sourceType"`
 	Behavior    string   `json:"behavior"`
+	EditorMode  string   `json:"editorMode,omitempty"`
 	Format      string   `json:"format"`
 	URL         string   `json:"url"`
 	Interval    int      `json:"interval"`

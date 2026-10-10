@@ -32,7 +32,11 @@ func archiveFixture(t *testing.T, names ...string) []byte {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := file.Write([]byte("fixture")); err != nil {
+		content := "fixture"
+		if strings.HasSuffix(name, "index.html") {
+			content = "<html>fixture</html>"
+		}
+		if _, err := file.Write([]byte(content)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -66,7 +70,9 @@ func testManager(t *testing.T, data []byte) (*Manager, *atomic.Int32) {
 		}
 		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(bytes.NewReader(payload))}, nil
 	})}
-	return NewManager(Options{DataDirectory: t.TempDir(), HTTPClient: client}), calls
+	m := NewManager(Options{DataDirectory: t.TempDir(), HTTPClient: client})
+	m.retryDelay = 0
+	return m, calls
 }
 
 func TestOfflineReadsAndPersistentResourceReuse(t *testing.T) {
@@ -101,7 +107,7 @@ func TestOfflineReadsAndPersistentResourceReuse(t *testing.T) {
 	if err := os.Remove(filepath.Join(m.root, version, "dist", "assets", "app.js")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := m.Ensure(context.Background(), version); err != nil || calls.Load() != 4 {
+	if _, err := m.Ensure(context.Background(), version); err != nil || calls.Load() != 2 {
 		t.Fatal("missing resource was not repaired", err)
 	}
 }

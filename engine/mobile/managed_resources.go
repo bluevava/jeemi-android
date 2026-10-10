@@ -56,18 +56,25 @@ func NormalizeScriptURL(address string) (string, error) {
 	}
 	return url, nil
 }
-func (r *ResourceDownload) Dashboard(privateRoot, version string) (string, error) {
+func (r *ResourceDownload) Dashboard(privateRoot, version string, reinstall bool) (string, error) {
 	if !filepath.IsAbs(privateRoot) {
 		return "", fmt.Errorf("invalid_resource_directory")
 	}
-	result, err := externalui.NewManager(externalui.Options{DataDirectory: privateRoot}).Ensure(r.ctx, version)
+	manager := externalui.NewManager(externalui.Options{DataDirectory: privateRoot})
+	var result string
+	var err error
+	if reinstall {
+		result, err = manager.Reinstall(r.ctx, version)
+	} else {
+		result, err = manager.Ensure(r.ctx, version)
+	}
 	if err != nil {
 		return "", fmt.Errorf("dashboard_download_failed")
 	}
 	return result, nil
 }
 func MaterializeDashboard(privateRoot, version, home string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	if externalui.NewManager(externalui.Options{DataDirectory: privateRoot}).Materialize(ctx, version, home) != nil {
 		return fmt.Errorf("dashboard_resources_unavailable")

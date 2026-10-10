@@ -84,6 +84,7 @@ func normalizeStrategyGroup(input StrategyGroup, now time.Time) (StrategyGroup, 
 		input.Strategy = ""
 		input.Lazy = false
 		input.Filter = NodeFilter{ProxyTypes: []string{}, NamePatterns: []string{}}
+		input.IncludeAllProviders = false
 	} else {
 		input.Policy = PolicyTarget{}
 		if !contains([]string{"select", "url-test", "fallback", "load-balance"}, input.Type) {
@@ -134,6 +135,9 @@ func normalizeStrategyGroup(input StrategyGroup, now time.Time) (StrategyGroup, 
 			return StrategyGroup{}, err
 		}
 		input.Filter = filter
+		if input.IncludeAllProviders && (len(filter.ProxyTypes) != 0 || len(filter.NamePatterns) != 0) {
+			return StrategyGroup{}, fmt.Errorf("including all subscription providers requires an unfiltered selector")
+		}
 	}
 	if input.CreatedAt == "" {
 		input.CreatedAt = now.Format(time.RFC3339Nano)
@@ -192,6 +196,9 @@ func normalizeRuleSet(input RuleSet, now time.Time) (RuleSet, error) {
 	}
 	if !contains([]string{"domain", "ipcidr", "classical"}, input.Behavior) {
 		return RuleSet{}, fmt.Errorf("rule set behavior is unsupported")
+	}
+	if input.EditorMode != "" && (!contains([]string{"app", "yaml"}, input.EditorMode) || input.SourceType != "inline" || input.Behavior != "classical") {
+		return RuleSet{}, fmt.Errorf("app editor requires an inline classical rule set")
 	}
 	if input.Behavior != "ipcidr" {
 		input.NoResolve = false

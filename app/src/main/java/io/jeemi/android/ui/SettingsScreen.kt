@@ -23,7 +23,6 @@ import io.jeemi.android.ui.components.*
 internal fun SettingsScreen(destination: Destination, state: AppState, model: JeemiViewModel,
     modifier: Modifier, dismiss: () -> Unit) {
     val preferences = state.library.preferences
-    var theme by rememberSaveable { mutableStateOf(preferences.theme) }
     val selectedLanguage = selectedAppLanguage()
     var language by rememberSaveable { mutableStateOf(selectedLanguage) }
     var density by rememberSaveable { mutableStateOf(preferences.nodeDensity) }
@@ -44,15 +43,8 @@ internal fun SettingsScreen(destination: Destination, state: AppState, model: Je
                     CollapsibleCard(stringResource(R.string.permissions), PermissionsHelp) { PermissionSettings() }
                 }
                 item {
-                    CollapsibleCard(stringResource(R.string.appearance), AppearanceHelp) {
-                        ChoiceField(stringResource(R.string.appearance), theme.name, AppTheme.entries.map {
-                            it.name to stringResource(it.label)
-                        }, !state.busy) { theme = AppTheme.valueOf(it) }
-                    }
-                }
-                item {
                     CollapsibleCard(stringResource(R.string.language), AppearanceHelp) {
-                        ChoiceField(stringResource(R.string.language), language.name, AppLanguage.entries.map {
+                        FixedChoiceField(stringResource(R.string.language), language.name, AppLanguage.entries.map {
                             it.name to stringResource(it.label)
                         }, !state.busy) { language = AppLanguage.valueOf(it) }
                     }
@@ -73,8 +65,8 @@ internal fun SettingsScreen(destination: Destination, state: AppState, model: Je
                 }
                 item {
                     CollapsibleCard(stringResource(R.string.geo_management), GeoHelp) {
-                        ChoiceField(stringResource(R.string.geo_mode), geoMode, listOf("mmdb" to "MetaDB / MMDB", "dat" to "DAT"), !state.busy) { geoMode = it }
-                        ChoiceField(stringResource(R.string.geo_loader), loader,
+                        FixedChoiceField(stringResource(R.string.geo_mode), geoMode, listOf("mmdb" to "MetaDB / MMDB", "dat" to "DAT"), !state.busy) { geoMode = it }
+                        FixedChoiceField(stringResource(R.string.geo_loader), loader,
                             listOf("memconservative" to stringResource(R.string.geo_memory), "standard" to stringResource(R.string.geo_standard)), !state.busy) { loader = it }
                         listOf("geoip-mmdb" to "GeoIP · MetaDB", "geosite" to "GeoSite · DAT",
                             "asn" to "ASN · MMDB", "geoip-dat" to "GeoIP · DAT").forEach { (kind, title) ->
@@ -111,12 +103,12 @@ internal fun SettingsScreen(destination: Destination, state: AppState, model: Je
                 item {
                     JeemiCard(Modifier.fillMaxWidth()) {
                         SectionTitle(R.string.view_options, DisplayHelp)
-                        ChoiceField(stringResource(R.string.node_density), density.name, NodeDensity.entries.map {
+                        FixedChoiceField(stringResource(R.string.node_density), density.name, NodeDensity.entries.map {
                             it.name to stringResource(when (it) {
                                 NodeDensity.LARGE -> R.string.density_large; NodeDensity.MEDIUM -> R.string.density_medium; NodeDensity.SMALL -> R.string.density_small
                             })
                         }, !state.busy) { density = NodeDensity.valueOf(it) }
-                        ChoiceField(stringResource(R.string.node_sort), sort.name, NodeSort.entries.map {
+                        FixedChoiceField(stringResource(R.string.node_sort), sort.name, NodeSort.entries.map {
                             it.name to stringResource(when (it) {
                                 NodeSort.ORIGINAL -> R.string.sort_original; NodeSort.NAME -> R.string.sort_name
                                 NodeSort.TYPE -> R.string.sort_type; NodeSort.DELAY -> R.string.sort_delay
@@ -124,7 +116,7 @@ internal fun SettingsScreen(destination: Destination, state: AppState, model: Je
                         }, !state.busy) { sort = NodeSort.valueOf(it) }
                         OutlinedTextField(concurrency, { concurrency = it }, label = { Text(stringResource(R.string.test_concurrency)) },
                             singleLine = true, enabled = !state.busy, modifier = Modifier.fillMaxWidth())
-                        ChoiceField(stringResource(R.string.connection_reset), reset, listOf("off" to stringResource(R.string.reset_off),
+                        FixedChoiceField(stringResource(R.string.connection_reset), reset, listOf("off" to stringResource(R.string.reset_off),
                             "selector" to stringResource(R.string.reset_selector), "all" to stringResource(R.string.reset_all)), !state.busy) { reset = it }
                     }
                 }
@@ -135,7 +127,7 @@ internal fun SettingsScreen(destination: Destination, state: AppState, model: Je
             TextButton(onClick = dismiss, enabled = !state.busy, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.cancel)) }
             Spacer(Modifier.width(12.dp))
             Button(onClick = {
-                model.savePreferences(preferences.copy(theme = theme, nodeDensity = density, nodeSort = sort,
+                model.savePreferences(preferences.copy(nodeDensity = density, nodeSort = sort,
                     testConcurrency = concurrency.toIntOrNull() ?: 0, connectionReset = reset, geoMode = geoMode, geoLoader = loader)) {
                     dismiss(); language.apply()
                 }

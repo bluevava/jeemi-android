@@ -14,9 +14,9 @@ class NavigationTest {
         compose.onNodeWithText(context.getString(R.string.status_control)).assertDoesNotExist()
         compose.onNodeWithText(context.getString(R.string.current_subscription)).assertDoesNotExist()
         compose.onNodeWithText(context.getString(R.string.proxy_mode)).assertDoesNotExist()
-        listOf("system", "gVisor", "mixed").forEach { compose.onNodeWithText(it).assertDoesNotExist() }
-        compose.onNodeWithText(context.getString(R.string.about_jeemi_description)).assertIsDisplayed()
-        compose.onNodeWithText(context.getString(R.string.add_subscription)).performClick()
+        listOf("system", "gVisor", "mips", "mixed").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+        compose.onNodeWithText(context.getString(R.string.about_jeemi_description)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.add_subscription)).performScrollTo().performClick()
         compose.onNode(hasSetTextAction() and hasText(context.getString(R.string.subscription_url))).assertIsDisplayed()
         compose.onNodeWithContentDescription(context.getString(R.string.back)).performClick()
         compose.onNode(hasText(context.getString(R.string.home)) and hasClickAction()).performClick()
@@ -25,7 +25,8 @@ class NavigationTest {
         compose.onNodeWithContentDescription(context.getString(R.string.settings)).performClick()
         compose.onNodeWithText(context.getString(R.string.home_settings)).assertIsDisplayed()
         compose.onNodeWithContentDescription(context.getString(R.string.vpn_quick_start)).assertIsDisplayed()
-        compose.onNodeWithText(context.getString(R.string.appearance)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.appearance)).assertDoesNotExist()
+        compose.onNodeWithText(context.getString(R.string.language)).assertIsDisplayed()
         compose.onNode(hasText(context.getString(R.string.cancel)) and hasClickAction()).performClick()
         compose.onNode(hasText(context.getString(R.string.subscriptions)) and hasClickAction()).performClick()
         compose.onNode(hasSetTextAction() and hasText(context.getString(R.string.subscription_url))).assertDoesNotExist()

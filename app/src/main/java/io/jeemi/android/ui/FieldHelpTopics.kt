@@ -82,6 +82,6 @@ internal val FieldHelpTopics = mapOf(
     "/tun/udp-timeout" to HelpContent(R.string.field_help_tun_udp_timeout_title, R.string.field_help_tun_udp_timeout_purpose, R.string.field_help_tun_udp_timeout_scenarios, R.string.field_help_tun_udp_timeout_cautions),
     "/tunnels" to HelpContent(R.string.field_help_tunnels_title, R.string.field_help_tunnels_purpose, R.string.field_help_tunnels_scenarios, R.string.field_help_tunnels_cautions),
     "/unified-delay" to HelpContent(R.string.field_help_unified_delay_title, R.string.field_help_unified_delay_purpose, R.string.field_help_unified_delay_scenarios, R.string.field_help_unified_delay_cautions),
-) + ExtraFieldHelp
+) + ExtraFieldHelp + LockedFieldHelp + FieldTreeBranchHelp
 
 internal fun fieldHelp(path: String): HelpContent = FieldHelpTopics[path] ?: FieldsHelp

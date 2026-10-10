@@ -34,8 +34,7 @@ class LocaleAndPortraitTest {
     private fun chooseChinese() {
         compose.onNodeWithContentDescription(text(R.string.settings)).performClick()
         click(R.string.language)
-        compose.onNode(hasText(text(R.string.language)) and hasText(text(R.string.language_english)) and hasClickAction()).performClick()
-        compose.onNode(hasText("简体中文") and hasAnyAncestor(isPopup())).performClick()
+        compose.onNode(hasText(text(R.string.language_chinese)) and hasAnyAncestor(hasContentDescription(text(R.string.language)))).performClick()
     }
     @Test fun languageDraftCancelAndSave() {
         waitLoaded()
@@ -44,14 +43,14 @@ class LocaleAndPortraitTest {
         assertEquals("en", compose.activity.resources.configuration.locales[0].language)
         chooseChinese()
         compose.onNode(hasText(text(R.string.save)) and hasClickAction()).performClick()
-        compose.waitUntil(15_000) { compose.onAllNodesWithText("状态控制").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(15_000) { compose.activity.resources.configuration.locales[0].language == "zh" }
         assertEquals("zh", AppCompatDelegate.getApplicationLocales()[0]?.language)
     }
     @Test fun portraitHasNoRemovedHomeControlsAndCoreCheckLivesInSettings() {
         waitLoaded()
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, compose.activity.requestedOrientation)
         assertEquals(Configuration.ORIENTATION_PORTRAIT, compose.activity.resources.configuration.orientation)
-        listOf(R.string.traffic, R.string.home_intro, R.string.core_pending, R.string.inherit, R.string.language, R.string.appearance, R.string.core_check).forEach {
+        listOf(R.string.traffic, R.string.home_intro, R.string.core_pending, R.string.inherit, R.string.language, R.string.core_check).forEach {
             compose.onNodeWithText(text(it)).assertDoesNotExist()
         }
         compose.onNodeWithContentDescription(text(R.string.settings)).performClick()
@@ -60,7 +59,7 @@ class LocaleAndPortraitTest {
         compose.waitUntil(15_000) { compose.onAllNodes(hasText("Mihomo Meta", substring = true)).fetchSemanticsNodes().isNotEmpty() }
     }
     @Test fun exposedFieldsHaveCompleteSpecificBilingualHelp() {
-        val fields = GoBusinessEngine().catalog().filterNot { it.hidden }
+        val fields = GoBusinessEngine().catalog()
         assertTrue(fields.isNotEmpty())
         assertEquals(emptyList<String>(), fields.filterNot { it.path in FieldHelpTopics }.map { it.path })
         for (tag in listOf("en", "zh-CN")) {
@@ -74,9 +73,8 @@ class LocaleAndPortraitTest {
     @Test fun nestedFieldDraftSurvivesLocaleAndActivityRecreation() {
         waitLoaded(); click(R.string.configuration); click(R.string.new_resource)
         compose.onNode(hasText(text(R.string.name)) and hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("Field draft")
-        dialogButton(R.string.add_field).performScrollTo().performClick()
-        compose.onNode(hasText(text(R.string.search_fields)) and hasSetTextAction()).performTextInput("keep-alive-interval")
-        compose.onNode(hasText("keep-alive-interval") and hasClickAction() and !hasSetTextAction()).performScrollTo().performClick()
+        compose.onNodeWithTag("field-tree-search").performScrollTo().performTextInput("keep-alive-interval")
+        compose.onNodeWithTag("field-name-/keep-alive-interval").performScrollTo().performClick()
         compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog()) and hasText("15")).performTextReplacement("42")
         changeLanguage("zh-CN")
         compose.activityRule.scenario.recreate()

@@ -17,6 +17,31 @@ const maxAndroidRoutes = 2048
 type vpnRoutePlan struct {
 	Include []string `json:"include"`
 	Exclude []string `json:"exclude"`
+	Address string   `json:"address"`
+}
+
+// mihomo v1.19.32 config.parseTun derives its IPv4 listener address from
+// dns.fake-ip-range and uses a /30 prefix, including in redir-host mode.
+// VpnService must assign that exact address before system/mixed can bind TCP.
+func androidTunAddress(root *yaml.Node) (string, error) {
+	value := "198.18.0.1/16"
+	node, found, err := document.Find(root, "/dns/fake-ip-range")
+	if err != nil {
+		return "", fmt.Errorf("invalid_vpn_address")
+	}
+	if found {
+		if node.Kind != yaml.ScalarNode || node.Tag != "!!str" {
+			return "", fmt.Errorf("invalid_vpn_address")
+		}
+		if node.Value != "" {
+			value = node.Value
+		}
+	}
+	prefix, err := netip.ParsePrefix(value)
+	if err != nil || !prefix.Addr().Is4() || prefix.Addr().IsUnspecified() || prefix.Addr().IsLoopback() || prefix.Addr().IsMulticast() {
+		return "", fmt.Errorf("invalid_vpn_address")
+	}
+	return netip.PrefixFrom(prefix.Addr(), 30).String(), nil
 }
 
 func androidRouteExclusions(root *yaml.Node) ([]string, error) {
@@ -58,6 +83,10 @@ func AndroidVpnRoutes(candidate string, ipv6, legacy bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	address, err := androidTunAddress(document.Root(doc))
+	if err != nil {
+		return "", err
+	}
 	prefixes := make([]netip.Prefix, 0, len(values))
 	for _, value := range values {
 		prefix, _ := netip.ParsePrefix(value)
@@ -85,7 +114,7 @@ func AndroidVpnRoutes(candidate string, ipv6, legacy bool) (string, error) {
 			unique = append(unique, prefix)
 		}
 	}
-	plan := vpnRoutePlan{Include: []string{}, Exclude: []string{}}
+	plan := vpnRoutePlan{Include: []string{}, Exclude: []string{}, Address: address}
 	roots := []netip.Prefix{netip.MustParsePrefix("0.0.0.0/0")}
 	if ipv6 {
 		roots = append(roots, netip.MustParsePrefix("::/0"))

@@ -41,6 +41,8 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
     var query by rememberSaveable { mutableStateOf("") }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var associationId by rememberSaveable { mutableStateOf<String?>(null) }
+    var bindingKind by rememberSaveable { mutableStateOf<BindingKind?>(null) }
+    var relationshipId by rememberSaveable { mutableStateOf<String?>(null) }
     var handledImport by rememberSaveable { mutableIntStateOf(state.importRevision) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val preferences = state.library.preferences
@@ -133,10 +135,23 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
                             state.library.subscriptions.forEach { subscription ->
                                 key(subscription.id) {
                                     var menu by remember { mutableStateOf(false) }
-                                    SubscriptionEntry(subscription, state.library.resources.firstOrNull { it.id == subscription.handlerId },
-                                        subscription.id == state.library.selectedId, state.busy, now,
+                                    SubscriptionEntry(subscription, subscription.id == state.library.selectedId,
+                                        state.busy || state.chainBusy || state.resourceDownloading, now,
                                         select = { model.select(subscription.id) }, refresh = { model.refresh(subscription.id) },
-                                        associate = { associationId = subscription.id; panel = "associate" }) {
+                                        bindings = {
+                                            SubscriptionBindings(subscription, state.library.resources.firstOrNull { it.id == subscription.handlerId },
+                                                state.chains.groups, state.busy || state.chainBusy || state.resourceDownloading,
+                                                bind = { kind ->
+                                                    associationId = subscription.id; bindingKind = kind
+                                                    panel = if (kind == BindingKind.CHAIN) "chains" else "associate"
+                                                }, unbind = { kind ->
+                                                    when (kind) {
+                                                        BindingKind.SCRIPT -> model.unlinkHandler(subscription, ResourceKind.SCRIPT)
+                                                        BindingKind.CONFIG -> model.unlinkHandler(subscription, ResourceKind.CONFIG)
+                                                        BindingKind.CHAIN -> model.associateChains(subscription.id, emptyList(), subscription.chainRevision, state.chains.revision) {}
+                                                    }
+                                                })
+                                        }) {
                                         Box {
                                             IconButton(onClick = { menu = true }, enabled = !state.busy) { Icon(Icons.Outlined.MoreVert, stringResource(R.string.more_actions)) }
                                             DropdownMenu(menu, { menu = false }) {
@@ -144,7 +159,8 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
                                                     menu = false; editingId = subscription.id
                                                     model.importDraft.value = subscription.original; panel = "import"
                                                 })
-                                                DropdownMenuItem(text = { Text(stringResource(R.string.associations)) }, onClick = { menu = false; associationId = subscription.id; panel = "associate" })
+                                                DropdownMenuItem(text = { Text(stringResource(R.string.associations)) }, onClick = { menu = false; associationId = subscription.id; bindingKind = null; panel = "associate" })
+                                                DropdownMenuItem(text = { Text(stringResource(R.string.resource_relationships)) }, onClick = { menu = false; relationshipId = "subscription:${subscription.id}" })
                                                 DropdownMenuItem(text = { Text(stringResource(R.string.chain_associate)) }, onClick = { menu = false; associationId = subscription.id; panel = "chains" })
                                                 DropdownMenuItem(text = { Text(stringResource(R.string.chain_generation_details)) }, enabled = subscription.chainGroupIds.isNotEmpty(),
                                                     onClick = { menu = false; model.previewChains(subscription.id) })
@@ -262,8 +278,9 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
     }
     if (panel == "fallback" && selected != null) FallbackDialog(state, model) { panel = null }
     if (panel == "associate") state.library.subscriptions.firstOrNull { it.id == associationId }?.let {
-        AssociationDialog(it, state, model) { panel = null }
+        AssociationDialog(it, state, model, bindingKind) { panel = null }
     }
+    relationshipId?.let { ResourceRelationshipsDialog(state.resourceGraph, it) { relationshipId = null } }
     if (panel == "chains") state.library.subscriptions.firstOrNull { it.id == associationId }?.let {
         ChainAssociation(it, state, model) { panel = null }
     }
@@ -274,26 +291,48 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
 }
 
 @Composable
-private fun AssociationDialog(subscription: Subscription, state: AppState, model: JeemiViewModel, dismiss: () -> Unit) {
-    var handler by rememberSaveable { mutableStateOf(subscription.handlerId) }
-    var extras by rememberSaveable { mutableStateOf(subscription.resourceIds) }
-    val revision = rememberSaveable { state.saveRevision }
-    LaunchedEffect(state.saveRevision) { if (state.saveRevision > revision) dismiss() }
-    EditorDialog(stringResource(R.string.associations), state.busy, dismiss, action = {
-        TextButton(onClick = { model.associate(subscription.id, handler, extras) }, enabled = !state.busy, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.save)) }
+private fun AssociationDialog(subscription: Subscription, state: AppState, model: JeemiViewModel,
+    kind: BindingKind?, dismiss: () -> Unit) {
+    val expected = remember(subscription.id) { subscription }
+    var handler by rememberSaveable(subscription.id, kind) { mutableStateOf(subscription.handlerId) }
+    var extras by rememberSaveable(subscription.id) { mutableStateOf(subscription.resourceIds) }
+    var query by rememberSaveable(subscription.id, kind) { mutableStateOf("") }
+    val resourceKind = when (kind) { BindingKind.SCRIPT -> ResourceKind.SCRIPT; BindingKind.CONFIG -> ResourceKind.CONFIG; else -> null }
+    val choices = state.library.resources.filter { it.kind in listOf(ResourceKind.CONFIG, ResourceKind.SCRIPT) &&
+        (resourceKind == null || it.kind == resourceKind) && it.name.contains(query, true) }
+    val legacy = state.library.resources.filter { it.formatVersion < 2 && it.kind in listOf(ResourceKind.GROUPS, ResourceKind.RULES) }
+    EditorDialog(stringResource(kind?.label ?: R.string.associations), state.busy, dismiss, footer = {
+        OutlinedButton(onClick = { model.previewAssociation(expected, handler, extras) }, enabled = !state.busy,
+            shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.check_preview)) }
+        Spacer(Modifier.width(8.dp))
+        Button(onClick = { model.associate(subscription.id, handler, extras, expected, dismiss) }, enabled = !state.busy,
+            shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.save)) }
     }, help = AssociationHelp) {
         LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-            item { ListItem(headlineContent = { Text(stringResource(R.string.no_handler)) }, leadingContent = { RadioButton(handler == null, null) }, modifier = Modifier.clickable(enabled = !state.busy) { handler = null }) }
-            items(state.library.resources.filter { it.kind in listOf(ResourceKind.CONFIG, ResourceKind.SCRIPT) }) { item ->
+            item {
+                if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                Text(subscription.name, style = MaterialTheme.typography.titleSmall)
+                state.library.resources.firstOrNull { it.id == handler }?.let {
+                    Text(stringResource(R.string.current_binding, it.name), style = MaterialTheme.typography.bodySmall)
+                }
+                OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text(stringResource(R.string.search_resources)) }, leadingIcon = { Icon(Icons.Outlined.Search, null) })
+            }
+            item { ListItem(headlineContent = { Text(stringResource(R.string.no_handler)) }, leadingContent = { RadioButton(handler == null, null) },
+                modifier = Modifier.clickable(enabled = !state.busy) { handler = null }) }
+            items(choices, key = { it.id }) { item ->
                 ListItem(headlineContent = { Text(item.name) }, supportingContent = { Text(stringResource(item.kind.label)) }, leadingContent = { RadioButton(handler == item.id, null) },
                     modifier = Modifier.clickable(enabled = !state.busy) { handler = item.id })
             }
-            item { Text(stringResource(R.string.extra_resources), Modifier.padding(vertical = 20.dp), style = MaterialTheme.typography.titleMedium) }
-            items(state.library.resources.filter { it.formatVersion < 2 && it.kind in listOf(ResourceKind.GROUPS, ResourceKind.RULES) }) { item ->
-                ListItem(headlineContent = { Text(item.name) }, supportingContent = { Text(stringResource(item.kind.label)) }, leadingContent = { Checkbox(item.id in extras, null) },
-                    modifier = Modifier.clickable(enabled = !state.busy) { extras = if(item.id in extras) extras - item.id else extras + item.id })
+            if (choices.isEmpty()) item { Text(stringResource(if (query.isBlank()) R.string.no_resources else R.string.no_results),
+                style = MaterialTheme.typography.bodySmall) }
+            if (legacy.isNotEmpty()) {
+                item { Text(stringResource(R.string.extra_resources), Modifier.padding(vertical = 20.dp), style = MaterialTheme.typography.titleSmall) }
+                items(legacy, key = { it.id }) { item ->
+                    ListItem(headlineContent = { Text(item.name) }, leadingContent = { Checkbox(item.id in extras, null) },
+                        modifier = Modifier.clickable(enabled = !state.busy) { extras = if (item.id in extras) extras - item.id else extras + item.id })
+                }
             }
-            if (state.library.resources.isEmpty()) item { Text(stringResource(R.string.no_resources), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }
@@ -307,7 +346,7 @@ private fun FallbackDialog(state: AppState, model: JeemiViewModel, dismiss: () -
         title = { SectionTitle(R.string.fallback_override, FallbackHelp) },
         text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.original_target, state.candidate?.fallbackOriginal.orEmpty()), style = MaterialTheme.typography.bodySmall)
-            ChoiceField(stringResource(R.string.fallback_override), mode, listOf("none" to stringResource(R.string.keep_original),
+            FixedChoiceField(stringResource(R.string.fallback_override), mode, listOf("none" to stringResource(R.string.keep_original),
                 "direct" to stringResource(R.string.mode_direct), "selector" to stringResource(R.string.target_selector)), !state.busy) { mode = it }
             if (mode == "selector") ChoiceField(stringResource(R.string.target_selector), selector,
                 state.candidate?.fallbackOptions.orEmpty().map { it to it }, !state.busy) { selector = it }

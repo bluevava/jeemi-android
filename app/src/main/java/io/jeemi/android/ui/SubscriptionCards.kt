@@ -150,8 +150,8 @@ private fun RowScope.SubscriptionActions(subscription: Subscription?, busy: Bool
 }
 
 @Composable
-internal fun SubscriptionEntry(subscription: Subscription, handler: LocalResource?, chosen: Boolean, busy: Boolean, now: Long,
-    select: () -> Unit, refresh: () -> Unit, associate: () -> Unit, menu: @Composable () -> Unit) {
+internal fun SubscriptionEntry(subscription: Subscription, chosen: Boolean, busy: Boolean, now: Long,
+    select: () -> Unit, refresh: () -> Unit, bindings: @Composable () -> Unit, menu: @Composable () -> Unit) {
     Card(Modifier.fillMaxWidth().semantics { selected = chosen }.clickable(enabled = !busy, role = Role.Button, onClick = select),
         shape = JeemiShapes.Component, colors = CardDefaults.cardColors(containerColor =
             if (chosen) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow)) {
@@ -174,25 +174,10 @@ internal fun SubscriptionEntry(subscription: Subscription, handler: LocalResourc
                 SummaryValue(expiryLabel(subscription), Modifier.weight(1f))
                 SummaryValue(usageLabel(subscription), Modifier.weight(1f), TextAlign.End)
             }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.rule_provider_count, subscription.ruleProviderCount), Modifier.weight(1f),
-                    style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                TextButton(onClick = associate, modifier = Modifier.weight(1.25f), enabled = !busy,
-                    contentPadding = PaddingValues(horizontal = 0.dp), shape = JeemiShapes.Component) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                        if (handler != null) {
-                            Icon(if (handler.kind == ResourceKind.SCRIPT) Icons.Outlined.Code else Icons.Outlined.Tune,
-                                stringResource(handler.kind.label), Modifier.size(14.dp))
-                            Spacer(Modifier.width(4.dp))
-                        }
-                        Text(handler?.name ?: stringResource(R.string.associate_subscription_handler), maxLines = 1,
-                            overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
+            Text(stringResource(R.string.rule_provider_count, subscription.ruleProviderCount),
+                Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
+            bindings()
             if (subscription.description.isNotBlank()) Text(subscription.description, style = MaterialTheme.typography.bodySmall)
-            if (subscription.chainGroupIds.isNotEmpty()) Text(stringResource(R.string.chain_linked_count, subscription.chainGroupIds.size),
-                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             if (subscription.skippedNodes > 0) Text(pluralStringResource(R.plurals.skipped_nodes, subscription.skippedNodes, subscription.skippedNodes),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }

@@ -82,14 +82,14 @@ func TestConnectionRuleUsesDesktopLiteralValidationAndCompatiblePayload(t *testi
 	}
 }
 func TestAndroidConnectionRulesAcceptPackagesAndAddressesButNotPaths(t *testing.T) {
-	for _, value := range []string{"/data/app/com.example/base.apk", `C:\Program Files\app.exe`, "org.example:service", "org.example.*"} {
+	for _, value := range []string{"/data/app/com.example/base.apk", `C:\Program Files\app.exe`, "org.example:service", "org.example.*", " com.example.app ", strings.Repeat("a", 256)} {
 		input, _ := json.Marshal(map[string]string{"name": "Apps", "matchType": "processName", "value": value})
 		if _, err := PrepareConnectionRule(`[]`, string(input), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"); err == nil {
 			t.Fatal("non-package application rule accepted")
 		}
 	}
 	for _, entry := range []struct{ kind, value, expected string }{
-		{"processName", " com.example.app ", "PROCESS-NAME,com.example.app"},
+		{"processName", "com.example.app", "PROCESS-NAME,com.example.app"},
 		{"processName", "android", "PROCESS-NAME,android"},
 		{"domain", "Example.COM", "DOMAIN-SUFFIX,example.com"},
 		{"ip", "203.0.113.2", "IP-CIDR,203.0.113.2/32"},
@@ -119,7 +119,7 @@ func TestHomeCompositionHasStableBytesAcrossRepeatedIdenticalInputs(t *testing.T
 	source := []byte("proxy-groups: [{name: Choose, type: select, proxies: [DIRECT, REJECT]}]\nrules: ['MATCH,Choose']\n")
 	previous := ""
 	for i := 0; i < 100; i++ {
-		result, err := applyHome(source, RuntimeDefaults(), "rule", "mmdb", "memconservative")
+		result, err := applyHome(source, RuntimeDefaults(), "rule", "mmdb", "memconservative", "")
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -7,7 +7,7 @@
     <string name="chain_busy">已有订阅请求正在进行。</string>
     <string name="chain_cancel_refresh">取消刷新</string>
     <string name="chain_cancelled">刷新已取消，已完成的来源保留更新，其余来源保留原节点。</string>
-    <string name="chain_candidate_invalid">新的链式配置未通过关联订阅校验，原有节点已保留。</string>
+    <string name="chain_candidate_invalid">候选配置未通过内置核心校验。</string>
     <string name="chain_core_version_required">所选核心版本不满足落地节点的协议要求，请更新核心。</string>
     <string name="chain_delete_note">删除后会重新生成关联订阅的候选配置。仍被订阅引用的分组需先解除关联。</string>
     <string name="chain_diag_generated">%1$s：生成 %2$d 个链式节点</string>
@@ -111,7 +111,7 @@
     <string name="help_chain_nodes_scenarios">手动维护落地节点的协议、认证、TLS 和传输字段。URI 参数与普通订阅共用新版解析器，数组/对象使用编码后的 JSON。</string>
     <string name="help_chain_purpose">管理落地节点 B，并关联到订阅。按最终选择器筛选中继 A，生成“本机 → A → B → 目标”的节点副本，追加到原选择器。</string>
     <string name="help_chain_scenarios">手动组粘贴自建节点，订阅组管理一个或多个 URL；多个订阅可共用分组。本地配置或脚本关联与链式关联互不替代。</string>
-    <string name="help_chain_source_cautions">只有添加、编辑或手动刷新才联网。列表隐藏完整 URL，编辑时可按需显示。离页或后台取消请求；每个来源单独提交，失败保留旧节点，取消保留已完成结果。受正文、跳转和总时限约束；过期编辑须重开，不能覆盖新修订。</string>
+    <string name="help_chain_source_cautions">只有添加、编辑或手动刷新才联网。列表隐藏完整 URL，编辑时可按需显示。离页或后台取消请求；每个来源单独提交，失败保留旧节点，取消保留已完成结果。受正文、跳转和总时限约束；过期编辑须重开，不能覆盖新修订。拉取失败且 Jeemi 代理仍在运行时，直连重试一次；取消或配置校验失败不重试。</string>
     <string name="help_chain_source_purpose">从 HTTP/HTTPS 来源拉取并解析落地节点，可以独立设置名称筛选；保留各来源最近成功的节点、时间和转换报告。</string>
     <string name="help_chain_source_scenarios">多个订阅 URL 放在同一分组，可单独刷新、刷新本组或刷新全部来源；合法来源筛选为空也可以保存，供后续刷新。</string>
     <string name="help_conversion_cautions">原文保持不变，来源路由不转换。无法识别或字段错误的 URI 节点会跳过并列出原因；没有可用节点、公共 DNS/证书元数据错误或最终配置校验失败时保留旧订阅。解析成功不等于节点连通，主页 DNS 覆盖仍按所选方式生效。</string>

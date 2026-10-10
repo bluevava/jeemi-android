@@ -22,16 +22,16 @@ data class HelpContent(@param:StringRes val title: Int, @param:StringRes val pur
     @param:StringRes val scenarios: Int, @param:StringRes val cautions: Int, @param:StringRes val extraCautions: Int? = null)
 
 @Composable
-fun FeatureHelp(content: HelpContent) {
+fun FeatureHelp(content: HelpContent, title: String = stringResource(content.title)) {
     var open by rememberSaveable { mutableStateOf(false) }
     IconButton(onClick = { open = true }, modifier = Modifier.size(48.dp)) {
-        Icon(Icons.AutoMirrored.Outlined.HelpOutline, stringResource(R.string.help_for, stringResource(content.title)),
+        Icon(Icons.AutoMirrored.Outlined.HelpOutline, stringResource(R.string.help_for, title),
             Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     if (open) {
         AlertDialog(
             onDismissRequest = { open = false },
-            title = { Text(stringResource(content.title)) },
+            title = { Text(title) },
             text = {
                 Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(20.dp)) {

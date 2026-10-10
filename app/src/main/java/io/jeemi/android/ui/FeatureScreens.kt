@@ -42,6 +42,7 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
         onDispose { dashboardLifecycle.removeObserver(observer); model.cancelDashboardDownload() }
     }
     var editor by rememberSaveable { mutableStateOf<String?>(null) }
+    val updateState = rememberAppUpdate(model.appUpdater)
     val runtime by model.runtime.collectAsStateWithLifecycle()
     val live by model.live.collectAsStateWithLifecycle()
     val active = runtime is RuntimeState.Running || runtime == RuntimeState.Starting || runtime == RuntimeState.Restarting
@@ -81,8 +82,7 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
                         RuntimeState.Stopping -> R.string.runtime_stopping
                         is RuntimeState.Running -> R.string.runtime_running
                     }), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    Switch(checked = active, onCheckedChange = { if (it) startVpn() else model.stopVpn() },
-                        colors = SwitchDefaults.colors(uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    JeemiSwitch(checked = active, onCheckedChange = { if (it) startVpn() else model.stopVpn() },
                         enabled = !authorizationPending && runtime != RuntimeState.Stopping &&
                             (active || (!state.busy && state.candidate != null && !state.projectionFailed)),
                         modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).semantics { contentDescription = switchAction })
@@ -90,17 +90,24 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
                 if (runtime is RuntimeState.Running && live?.let { it.profileId != state.library.selectedId ||
                     it.revision != state.candidate?.revision || it.geoRevision != state.geoRevision } == true)
                     Text(stringResource(R.string.pending_restart), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().semantics { contentDescription = modeLabel }) {
-                    ProxyMode.entries.forEachIndexed { index, mode ->
-                        SegmentedButton(selected = state.library.preferences.mode == mode,
-                            onClick = { model.savePreferences(state.library.preferences.copy(mode = mode)) },
-                            enabled = !state.busy, shape = SegmentedButtonDefaults.itemShape(index, 3)) { Text(stringResource(mode.label)) }
-                    }
+                SegmentedChoice(modeLabel, state.library.preferences.mode.name,
+                    ProxyMode.entries.map { it.name to stringResource(it.label) }, enabled = !state.busy, showLabel = false) {
+                    model.savePreferences(state.library.preferences.copy(mode = ProxyMode.valueOf(it)))
+                }
+                SegmentedChoice(stringResource(R.string.tun_stack), state.library.preferences.tunStack.name,
+                    TunStack.entries.map { it.name to it.title }, enabled = !state.busy, showLabel = false,
+                    optionTagPrefix = "home-stack-") {
+                    model.savePreferences(state.library.preferences.copy(tunStack = TunStack.valueOf(it)))
+                }
+                SegmentedChoice(stringResource(R.string.appearance), state.library.preferences.theme.name,
+                    AppTheme.entries.map { it.name to stringResource(it.label) }, enabled = !state.busy, showLabel = false,
+                    optionTagPrefix = "home-theme-") {
+                    model.savePreferences(state.library.preferences.copy(theme = AppTheme.valueOf(it)))
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.external_ui), Modifier.weight(1f))
                     FeatureHelp(ExternalUIHelp)
-                    Switch(checked = state.library.preferences.externalUIEnabled || state.dashboardDownloading,
+                    JeemiSwitch(checked = state.library.preferences.externalUIEnabled || state.dashboardDownloading,
                         onCheckedChange = model::setExternalUI, enabled = !state.busy,
                         modifier = Modifier.semantics { contentDescription = externalLabel })
                 }
@@ -110,7 +117,7 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
                     Text(stringResource(R.string.dashboard_preparing), style = MaterialTheme.typography.bodySmall)
                     TextButton(onClick = model::cancelDashboardDownload, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.cancel)) }
                 }
-                if (state.library.preferences.externalUIEnabled)
+                if (state.library.preferences.externalUIEnabled) {
                     OutlinedButton(onClick = model::openDashboard, modifier = Modifier.fillMaxWidth(),
                         enabled = !state.busy && runtime is RuntimeState.Running && live?.let {
                             it.profileId == state.library.selectedId && it.revision == state.candidate?.revision && it.geoRevision == state.geoRevision
@@ -119,7 +126,24 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.open_zashboard))
                     }
+                    TextButton(onClick = model::repairExternalUI, enabled = !state.busy && !state.dashboardDownloading,
+                        shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.dashboard_reinstall)) }
+                    if (state.dashboardPrepared && !state.dashboardDownloading)
+                        Text(stringResource(if (state.dashboardRestartSession != null && state.dashboardRestartSession == live?.sessionId)
+                            R.string.dashboard_restart else R.string.dashboard_ready), style = MaterialTheme.typography.bodySmall)
+                }
                 if (state.projectionFailed) Text(stringResource(R.string.candidate_error), color = MaterialTheme.colorScheme.error)
+            }
+        }
+        item {
+            CollapsibleCard(stringResource(R.string.runtime_preferences), RuntimeHelp, initiallyOpen = false) {
+                listOf("basic" to R.string.runtime_basics, "dns" to R.string.dns_settings,
+                    "resources" to R.string.dns_resources, "lan" to R.string.lan_rules).forEach { (id, label) ->
+                    OutlinedButton(onClick = { model.beginRuntimeEdit(); editor = id }, enabled = !state.busy, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
+                        Text(stringResource(label), Modifier.weight(1f))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, Modifier.size(18.dp))
+                    }
+                }
             }
         }
         item {
@@ -143,19 +167,10 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
                         openAboutLink("https://t.me/Jeemi_channel")
                     }
                 }
+                AppUpdateControl(updateState, model.appUpdater)
             }
         }
-        item {
-            CollapsibleCard(stringResource(R.string.runtime_preferences), RuntimeHelp) {
-                listOf("basic" to R.string.runtime_basics, "dns" to R.string.dns_settings,
-                    "resources" to R.string.dns_resources, "lan" to R.string.lan_rules).forEach { (id, label) ->
-                    OutlinedButton(onClick = { model.beginRuntimeEdit(); editor = id }, enabled = !state.busy, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium) {
-                        Text(stringResource(label), Modifier.weight(1f))
-                        Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, Modifier.size(18.dp))
-                    }
-                }
-            }
-        }
+
     }
     editor?.let { RuntimeEditor(it, state, model) { editor = null } }
 }

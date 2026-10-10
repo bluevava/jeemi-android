@@ -9,7 +9,7 @@ import (
 
 func TestDashboardFinalLayerOverridesSourceAndKeepsPrivateController(t *testing.T) {
 	original := "external-ui: /untrusted\nexternal-ui-url: https://untrusted.test/ui.zip\nexternal-ui-name: other\nexternal-controller-cors: {allow-origins: ['*']}\nproxies: []\nrules: ['MATCH,DIRECT']\n"
-	config, err := AndroidSessionConfiguration(original, strings.Repeat("s", 48), 12345, true)
+	config, err := AndroidSessionConfiguration(original, strings.Repeat("s", 48), 12345, true, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestDashboardFinalLayerOverridesSourceAndKeepsPrivateController(t *testing.
 	on, _ := document.Parse([]byte(enabled))
 	stack, found, _ := document.Find(document.Root(on), "/tun/stack")
 	if strings.Contains(enabled, "untrusted") || !strings.Contains(enabled, "127.0.0.1:12345") ||
-		!strings.Contains(enabled, "external-ui/zashboard/v3.26.0/dist") || !found || stack.Value != "gvisor" {
+		!strings.Contains(enabled, "external-ui/zashboard/v3.26.0/dist") || !found || stack.Value != "mips" {
 		t.Fatal("invalid managed UI configuration")
 	}
 	disabled, err := AndroidDashboardConfiguration(enabled, "")

@@ -19,8 +19,9 @@ const maxExpandedBytes int64 = 256 << 20
 const maxFiles = 4096
 
 type metadata struct {
-	Release Release          `json:"release"`
-	Files   map[string]int64 `json:"files"`
+	Release Release           `json:"release"`
+	Files   map[string]int64  `json:"files"`
+	Hashes  map[string]string `json:"sha256,omitempty"`
 }
 
 func (m *Manager) Installed(version string) (Release, error) {
@@ -28,6 +29,10 @@ func (m *Manager) Installed(version string) (Release, error) {
 }
 
 func (m *Manager) installed(version string, full bool) (Release, error) {
+	return m.installedContext(context.Background(), version, full)
+}
+
+func (m *Manager) installedContext(ctx context.Context, version string, full bool) (Release, error) {
 	if !ValidVersion(version) {
 		return Release{}, fmt.Errorf("invalid zashboard version")
 	}
@@ -53,9 +58,20 @@ func (m *Manager) installed(version string, full bool) (Release, error) {
 	if meta.Files["index.html"] <= 0 {
 		return Release{}, fmt.Errorf("zashboard index is missing")
 	}
+	if len(meta.Hashes) != 0 && len(meta.Hashes) != len(meta.Files) {
+		return Release{}, fmt.Errorf("invalid zashboard hashes")
+	}
+	var total int64
 	for name, size := range meta.Files {
+		if err := ctx.Err(); err != nil {
+			return Release{}, err
+		}
 		if !safeName(name) || size < 0 || size > maxExpandedBytes {
 			return Release{}, fmt.Errorf("invalid zashboard metadata")
+		}
+		total += size
+		if total > maxExpandedBytes {
+			return Release{}, fmt.Errorf("invalid zashboard metadata size")
 		}
 		if !full && name != "index.html" {
 			continue
@@ -64,12 +80,23 @@ func (m *Manager) installed(version string, full bool) (Release, error) {
 		if err != nil || !info.Mode().IsRegular() || info.Size() != size {
 			return Release{}, fmt.Errorf("zashboard resources are incomplete")
 		}
+		if len(meta.Hashes) > 0 {
+			digest, err := fileHash(ctx, root, version+"/dist/"+name, size)
+			if err != nil || digest != meta.Hashes[name] {
+				return Release{}, fmt.Errorf("zashboard resource checksum mismatch")
+			}
+		}
+	}
+	if full {
+		if err := validateEntrypoint(ctx, filepath.Join(m.root, version, "dist"), meta.Files); err != nil {
+			return Release{}, err
+		}
 	}
 	return meta.Release, nil
 }
 
 func safeName(name string) bool {
-	if !fs.ValidPath(name) || name == "." || strings.ContainsAny(name, "\\:\x00\r\n") {
+	if len(name) > 1024 || !fs.ValidPath(name) || name == "." || strings.ContainsAny(name, "\\:\x00\r\n") {
 		return false
 	}
 	for _, part := range strings.Split(name, "/") {
@@ -96,6 +123,46 @@ func (writer progressWriter) Write(data []byte) (int, error) {
 }
 
 func (m *Manager) install(ctx context.Context, release Release) error {
+	return m.stageInstall(ctx, release, func(destination string) error {
+		return m.retry(ctx, func() error { return m.downloadArchive(ctx, release, destination) })
+	})
+}
+
+func (m *Manager) downloadArchive(ctx context.Context, release Release, destination string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	file, err := os.OpenFile(destination, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	response, err := m.request(ctx, release.address)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	m.mu.Lock()
+	m.state.ReceivedBytes = 0
+	m.mu.Unlock()
+	hash := sha256.New()
+	count, err := io.Copy(io.MultiWriter(file, hash, progressWriter{manager: m, ctx: ctx}), io.LimitReader(contextReader{ctx, response.Body}, release.Size+1))
+	if err != nil {
+		return err
+	}
+	if count < release.Size {
+		return io.ErrUnexpectedEOF
+	}
+	if count != release.Size || hex.EncodeToString(hash.Sum(nil)) != release.SHA256 {
+		return fmt.Errorf("zashboard archive size or SHA-256 mismatch")
+	}
+	if err := file.Sync(); err != nil {
+		return err
+	}
+	return file.Close()
+}
+
+func (m *Manager) stageInstall(ctx context.Context, release Release, fetch func(string) error) error {
 	if err := os.MkdirAll(m.staging, 0700); err != nil {
 		return fmt.Errorf("create zashboard staging directory: %w", err)
 	}
@@ -110,30 +177,8 @@ func (m *Manager) install(ctx context.Context, release Release) error {
 		}
 	}()
 	archivePath := filepath.Join(stage, "dist.zip")
-	file, err := os.OpenFile(archivePath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-	if err != nil {
+	if err := fetch(archivePath); err != nil {
 		return err
-	}
-	response, err := m.request(ctx, release.address)
-	if err != nil {
-		file.Close()
-		return err
-	}
-	hash := sha256.New()
-	count, err := io.Copy(io.MultiWriter(file, hash, progressWriter{manager: m, ctx: ctx}), io.LimitReader(response.Body, release.Size+1))
-	response.Body.Close()
-	if err == nil {
-		err = file.Sync()
-	}
-	closeErr := file.Close()
-	if err != nil {
-		return err
-	}
-	if closeErr != nil {
-		return closeErr
-	}
-	if count != release.Size || hex.EncodeToString(hash.Sum(nil)) != release.SHA256 {
-		return fmt.Errorf("zashboard archive size or SHA-256 mismatch")
 	}
 	m.mu.Lock()
 	m.state.Phase = "installing"
@@ -146,11 +191,26 @@ func (m *Manager) install(ctx context.Context, release Release) error {
 	if err != nil {
 		return err
 	}
-	data, err := json.Marshal(metadata{Release: release, Files: files})
+	if err := validateEntrypoint(ctx, filepath.Join(candidate, "dist"), files); err != nil {
+		return err
+	}
+	hashes, err := hashFiles(ctx, filepath.Join(candidate, "dist"), files)
 	if err != nil {
 		return err
 	}
+	data, err := json.Marshal(metadata{Release: release, Files: files, Hashes: hashes})
+	if err != nil {
+		return err
+	}
+	if len(data) > 1<<20 {
+		return fmt.Errorf("zashboard metadata exceeds size limit")
+	}
 	if err := os.WriteFile(filepath.Join(candidate, "metadata.json"), data, 0600); err != nil {
+		return err
+	}
+	// Keep the verified archive for offline repair after incomplete disk writes
+	// or resource loss; it never enters the core's publicly served directory.
+	if err := os.Rename(archivePath, filepath.Join(candidate, "archive.zip")); err != nil {
 		return err
 	}
 	if err := ctx.Err(); err != nil {
@@ -160,6 +220,11 @@ func (m *Manager) install(ctx context.Context, release Release) error {
 		return err
 	}
 	destination := filepath.Join(m.root, release.Version)
+	cacheFiles.Lock()
+	defer cacheFiles.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	backup := filepath.Join(stage, "previous")
 	previous := false
 	if _, err := os.Lstat(destination); err == nil {
@@ -255,7 +320,7 @@ func extract(ctx context.Context, archivePath, directory string) (map[string]int
 			input.Close()
 			return nil, err
 		}
-		n, err := io.Copy(output, io.LimitReader(input, int64(file.UncompressedSize64)+1))
+		n, err := io.Copy(output, io.LimitReader(contextReader{ctx, input}, int64(file.UncompressedSize64)+1))
 		input.Close()
 		closeErr := output.Close()
 		if err != nil {

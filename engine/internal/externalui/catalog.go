@@ -74,27 +74,46 @@ func (m *Manager) request(ctx context.Context, address string) (*http.Response, 
 		return nil, fmt.Errorf("invalid zashboard request")
 	}
 	req.Header.Set("User-Agent", "Jeemi-zashboard-manager")
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	if req.URL.Host == "api.github.com" {
+		req.Header.Set("Accept", "application/vnd.github+json")
+		req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	} else {
+		req.Header.Set("Accept", "application/octet-stream")
+	}
 	response, err := m.client.Do(req)
 	if err != nil {
+		if retryable(err) {
+			return nil, transientFailure{fmt.Errorf("zashboard network interrupted")}
+		}
 		return nil, fmt.Errorf("zashboard request failed (check network or retry)")
 	}
 	if response.StatusCode != http.StatusOK {
 		response.Body.Close()
-		return nil, fmt.Errorf("zashboard request returned HTTP %d", response.StatusCode)
+		err := fmt.Errorf("zashboard request returned HTTP %d", response.StatusCode)
+		switch response.StatusCode {
+		case 408, 429, 500, 502, 503, 504:
+			return nil, transientFailure{err}
+		}
+		return nil, err
 	}
 	return response, nil
 }
 
 func (m *Manager) fetch(ctx context.Context, suffix string) ([]Release, error) {
-	response, err := m.request(ctx, m.api+suffix)
+	var data []byte
+	err := m.retry(ctx, func() error {
+		response, err := m.request(ctx, m.api+suffix)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
+		data, err = io.ReadAll(io.LimitReader(contextReader{ctx, response.Body}, (4<<20)+1))
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
-	data, err := io.ReadAll(io.LimitReader(response.Body, (4<<20)+1))
-	if err != nil || len(data) > 4<<20 {
+	if len(data) > 4<<20 {
 		return nil, fmt.Errorf("invalid zashboard release response")
 	}
 	var releases []githubRelease

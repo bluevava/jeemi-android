@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.jeemi.android.R
 import io.jeemi.android.ui.components.FeatureHelp
+import io.jeemi.android.ui.components.JeemiSwitch
 import kotlinx.coroutines.awaitCancellation
 import org.json.JSONObject
 
@@ -47,7 +48,7 @@ fun ToolsScreen(model: JeemiViewModel, modifier: Modifier) {
         ResolverField(R.string.dns_custom, custom, !feed.busy) { custom = it }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.dns_custom_proxy), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            Switch(customProxy, { customProxy = it }, enabled = !feed.busy)
+            JeemiSwitch(customProxy, { customProxy = it }, enabled = !feed.busy)
         }
         if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (feed.error.isNotEmpty()) Text(dnsError(feed.error), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)

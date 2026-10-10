@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.net.VpnService
 import android.provider.Settings
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -24,9 +23,11 @@ import io.jeemi.android.R
 @Composable
 internal fun PermissionSettings() {
     val context = LocalContext.current
-    fun statuses(): List<Boolean> {
+    fun statuses(): List<Boolean?> {
         val notifications = context.getSystemService(NotificationManager::class.java)
-        return listOf(runCatching { VpnService.prepare(context) == null }.getOrDefault(false),
+        // prepare() can revoke another pre-consented VPN. Only the explicit
+        // start action may call it; this settings panel is read-only.
+        return listOf(null,
             notifications.areNotificationsEnabled() && notifications.getNotificationChannel("vpn")?.importance != NotificationManager.IMPORTANCE_NONE,
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
@@ -35,7 +36,11 @@ internal fun PermissionSettings() {
     val titles = listOf(R.string.vpn_authorization, R.string.notification_permission, R.string.camera_permission)
     titles.forEachIndexed { index, title ->
         ListItem(headlineContent = { Text(stringResource(title)) },
-            supportingContent = { Text(stringResource(if (allowed[index]) R.string.permission_granted else R.string.permission_not_granted)) },
+            supportingContent = { Text(stringResource(when (allowed[index]) {
+                null -> R.string.vpn_permission_on_start
+                true -> R.string.permission_granted
+                false -> R.string.permission_not_granted
+            })) },
             trailingContent = { IconButton(onClick = {
                 val intent = when (index) {
                     0 -> Intent(Settings.ACTION_VPN_SETTINGS)

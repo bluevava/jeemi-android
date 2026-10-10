@@ -103,7 +103,7 @@ func TestAndroidSessionPreservesExplicitProcessModesAndFalse(t *testing.T) {
 		prefs.DNSEnabled = false
 		prefs.AllowLAN = false
 		out := projectTest(t, workspaceInput{Configuration: "find-process-mode: always\nipv6: true\ndns: {enable: true}\nrules: ['MATCH,DIRECT']", Runtime: json.RawMessage(jsonText(t, prefs))})
-		session, err := AndroidSessionConfiguration(out.YAML, strings.Repeat("a", 32), 19090, false)
+		session, err := AndroidSessionConfiguration(out.YAML, strings.Repeat("a", 32), 19090, false, "")
 		if err != nil {
 			t.Fatal(err)
 		}

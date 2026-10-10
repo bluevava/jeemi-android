@@ -15,4 +15,6 @@ class JeemiApplication : Application() {
     internal val selectorIcons by lazy { io.jeemi.android.data.SelectorIcons(
         store = io.jeemi.android.data.SelectorIconStore(java.io.File(noBackupFilesDir, "selector-icons"))) }
     val runtime by lazy { VpnController(this) }
+    internal fun subscriptionFetcher() = io.jeemi.android.data.SubscriptionFetcher(
+        directFallback = { io.jeemi.android.data.directSubscriptionRoute(this, runtime) })
 }

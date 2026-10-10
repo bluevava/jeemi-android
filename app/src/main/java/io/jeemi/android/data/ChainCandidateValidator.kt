@@ -6,7 +6,7 @@ import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-/** Validate affected chain candidates with the bundled core, without starting
+/** Validate affected resource and chain candidates with the bundled core, without starting
  * a VPN, listeners or a controller. One private GEO snapshot per transaction. */
 internal class ChainCandidateValidator(private val app: JeemiApplication) : AutoCloseable {
     private val directory = File(app.cacheDir, "chain-validation-${UUID.randomUUID()}")
@@ -21,7 +21,7 @@ internal class ChainCandidateValidator(private val app: JeemiApplication) : Auto
                 "[{\"path\":\"/geox-url\",\"strategy\":\"replace\",\"conflictPolicy\":\"error\"}]")
             File(directory, "config.yaml").writeText(input)
             val process = ProcessBuilder(BundledCore(app).executable.absolutePath, "-t", "-d", directory.absolutePath)
-                .redirectErrorStream(true).redirectOutput(File(directory, "validation.log")).start()
+                .redirectErrorStream(true).redirectOutput(File("/dev/null")).start()
             try { check(process.waitFor(20, TimeUnit.SECONDS) && process.exitValue() == 0) }
             finally { process.destroyForcibly() }
         } catch (_: Exception) { throw IllegalArgumentException("chain_proxy:candidate_invalid") }

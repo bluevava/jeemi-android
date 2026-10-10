@@ -90,6 +90,8 @@ class RuntimePreferencesTest {
         val previous = AppCompatDelegate.getApplicationLocales()
         try {
             compose.runOnUiThread { AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("zh-CN")) }
+            compose.waitUntil(15000) { compose.activity.resources.configuration.locales[0].language == "zh" }
+            compose.waitForIdle()
             openResources()
             capture("resources-zh")
             field("dnsNameserverPolicyYaml")

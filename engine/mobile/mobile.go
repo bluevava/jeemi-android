@@ -25,7 +25,7 @@ func Version() string { return "jeemi-business/1" }
 func SubscriptionParserVersion() int { return subscriptionformat.Version }
 
 // The packaged jeemi.2 core is based on this official protocol implementation.
-const bundledProtocolVersion = "v1.19.30"
+const bundledProtocolVersion = "v1.19.32"
 
 type nodeSummary struct {
 	Name string `json:"name"`

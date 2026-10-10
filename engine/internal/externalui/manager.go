@@ -24,14 +24,15 @@ type State struct {
 }
 
 type Manager struct {
-	operation sync.Mutex
-	mu        sync.RWMutex
-	root      string
-	staging   string
-	client    *http.Client
-	api       string
-	state     State
-	cancel    context.CancelFunc
+	operation  sync.Mutex
+	mu         sync.RWMutex
+	root       string
+	staging    string
+	client     *http.Client
+	api        string
+	state      State
+	cancel     context.CancelFunc
+	retryDelay time.Duration
 }
 
 type Options struct {
@@ -39,13 +40,18 @@ type Options struct {
 	HTTPClient    *http.Client
 }
 
+// Managers are short lived at the mobile bridge. Serialize cache promotion and
+// session snapshots across instances so reinstall cannot remove a copy in use.
+var cacheFiles sync.Mutex
+
 func NewManager(options Options) *Manager {
 	dataRoot := options.DataDirectory
 	manager := &Manager{
-		root:    filepath.Join(dataRoot, "runtime", "mihomo", filepath.FromSlash(RuntimeDirectory)),
-		staging: filepath.Join(dataRoot, "cache", "zashboard", "staging"),
-		api:     officialAPI,
-		client: &http.Client{Timeout: 3 * time.Minute, CheckRedirect: func(request *http.Request, via []*http.Request) error {
+		root:       filepath.Join(dataRoot, "runtime", "mihomo", filepath.FromSlash(RuntimeDirectory)),
+		staging:    filepath.Join(dataRoot, "cache", "zashboard", "staging"),
+		api:        officialAPI,
+		retryDelay: 500 * time.Millisecond,
+		client: &http.Client{Timeout: 90 * time.Second, CheckRedirect: func(request *http.Request, via []*http.Request) error {
 			if len(via) > 10 || request.URL.Scheme != "https" {
 				return fmt.Errorf("unsupported zashboard redirect")
 			}
@@ -81,7 +87,7 @@ func (m *Manager) begin(ctx context.Context, phase, version string) (context.Con
 	if !m.operation.TryLock() {
 		return nil, nil, fmt.Errorf("zashboard operation already in progress")
 	}
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	m.mu.Lock()
 	m.cancel = cancel
 	m.state.Phase, m.state.DownloadingVersion, m.state.LastError = phase, version, ""
@@ -144,7 +150,7 @@ func (m *Manager) Ensure(ctx context.Context, version string) (string, error) {
 		}
 	}
 	if version != "" {
-		if _, err := m.Installed(version); err == nil {
+		if err := m.ensureLocal(ctx, version); err == nil {
 			return version, nil
 		}
 	}
@@ -154,11 +160,20 @@ func (m *Manager) Ensure(ctx context.Context, version string) (string, error) {
 // Download accepts a release tag, or the empty string for GitHub's latest
 // formal release. Existing valid versions are never downloaded again.
 func (m *Manager) Download(ctx context.Context, version string) (selected string, err error) {
+	return m.download(ctx, version, false)
+}
+
+// Reinstall is explicitly requested by the user, even for an intact cache.
+func (m *Manager) Reinstall(ctx context.Context, version string) (string, error) {
+	return m.download(ctx, version, true)
+}
+
+func (m *Manager) download(ctx context.Context, version string, force bool) (selected string, err error) {
 	if version != "" && !ValidVersion(version) {
 		return "", fmt.Errorf("invalid zashboard version")
 	}
-	if version != "" {
-		if _, err := m.Installed(version); err == nil {
+	if version != "" && !force {
+		if _, err := m.installedContext(ctx, version, true); err == nil {
 			return version, nil
 		}
 	}
@@ -179,8 +194,10 @@ func (m *Manager) Download(ctx context.Context, version string) (selected string
 	if version != "" && release.Version != version {
 		return "", fmt.Errorf("zashboard release tag mismatch")
 	}
-	if _, err := m.Installed(release.Version); err == nil {
-		return release.Version, nil
+	if !force {
+		if _, err := m.installedContext(ctx, release.Version, true); err == nil {
+			return release.Version, nil
+		}
 	}
 	m.mu.Lock()
 	m.state.DownloadingVersion, m.state.TotalBytes = release.Version, release.Size

@@ -12,7 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-/** Load only icons requested by visible connection rows; never enumerate apps. */
+/** Load only icons requested by visible connection/editor rows; never enumerate apps. */
 internal class InstalledAppIcons(private val readDrawable: (String) -> Drawable?) {
     constructor(packages: PackageManager) : this({ installedAppDrawable(packages, it) })
     private data class Entry(val bitmap: Bitmap?)

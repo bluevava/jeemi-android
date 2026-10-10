@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_rule_list">App 列表</string>
+    <string name="app_rule_apps">规则列表</string>
+    <string name="app_rule_not_installed">未安装</string>
+    <string name="app_rule_add">添加 App</string>
+    <string name="app_rule_add_selected">添加（%1$d）</string>
+    <string name="app_rule_search">搜索应用名称或包名</string>
+    <string name="app_rule_system">显示系统应用</string>
+    <string name="app_rule_yaml">完整规则 YAML</string>
+    <string name="app_rule_count">%1$d 个应用 · %2$d 条其他规则</string>
+    <string name="app_rule_invalid">无法读取应用规则，请检查完整规则 YAML。</string>
+    <string name="app_rule_load_failed">无法加载应用，请稍后重试。</string>
+    <string name="app_rule_retry">重试</string>
+    <string name="app_rules_purpose">App 列表是本地 classical 规则集的显示开关，默认开启，不改变规则行为。列表按 YAML 顺序显示全部条目：包名规则显示应用信息，域名、IP、正则等其他规则显示为单行标签。</string>
+    <string name="app_rules_scenarios">开启时点击添加 App，可搜索应用名称或包名、多选并按选择顺序追加；系统应用默认隐藏，可按需显示。已安装应用显示图标、名称和包名，未安装包名在图标位置显示“未安装”。上下移动每次移动一行，删除只移除所选应用条目。完整 YAML 区可编辑所有规则，关闭开关则只显示文本编辑。</string>
+    <string name="app_rules_cautions">开关与列表操作只修改草稿，切换显示不改写 YAML。仅精确 PROCESS-NAME 包名规则显示应用信息，图标读取失败不代表未安装。已有重复条目仍显示，添加时跳过已存在包名。YAML 无效时需先修正；保存校验资源图和候选，重启代理后生效。连接详情添加包名时优先选择开启 App 列表的规则集。应用匹配需要进程识别，部分流量可能因系统限制无法识别。</string>
+</resources>

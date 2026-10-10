@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_update_check">检查更新</string>
+    <string name="app_update_install">安装更新</string>
+    <string name="app_update_version">当前版本 %1$s</string>
+    <string name="app_update_checking">正在检查最新发布版本…</string>
+    <string name="app_update_downloading">正在下载 %1$s · %2$d%%</string>
+    <string name="app_update_verifying">正在校验安装包…</string>
+    <string name="app_update_current">当前没有可用更新 · 最新发布 %1$s</string>
+    <string name="app_update_ready">更新已下载 · %1$s</string>
+    <string name="app_update_cancelled">已取消更新</string>
+    <string name="app_update_network_error">检查或下载更新失败，请检查网络后重试。</string>
+    <string name="app_update_no_release">开源仓库暂未发布版本。</string>
+    <string name="app_update_release_error">发布信息不完整或不一致，请稍后重试。</string>
+    <string name="app_update_incompatible">此版本无法更新当前应用，请检查 Android 版本、架构及签名是否兼容；调试版无法被正式更新覆盖。</string>
+    <string name="app_update_package_error">安装包校验失败或缓存文件已丢失，请重新检查更新并下载。</string>
+    <string name="app_update_storage_error">存储空间不足或无法保存安装包。</string>
+    <string name="app_update_permission_error">尚未允许安装。点击“安装更新”，在系统设置中允许此来源后返回继续。</string>
+    <string name="app_update_installer_error">无法打开系统安装界面。</string>
+    <string name="help_app_update_purpose">从 bluevava/jeemi-android 开源仓库检查最新正式发布版本，有新版时自动下载适合当前设备架构的安装包。</string>
+    <string name="help_app_update_scenarios">点击“检查更新”开始检查，下载及校验完成后打开 Android 安装界面。如需授权，在系统设置中允许 Jeemi 安装应用，返回后继续；安装仍需你确认。</string>
+    <string name="help_app_update_cautions">下载会使用网络流量；仅点击按钮时检查，离开主页或进入后台会取消未完成的检查与下载。不静默安装、不降级；核对大小、SHA-256、包名、版本、架构与签名。取消系统授权或安装后，已下载的安装包可再次安装。正式更新用于同签名的正式版，不能覆盖调试版。安装时 Android 可能重启应用并中断 VPN。</string>
+</resources>

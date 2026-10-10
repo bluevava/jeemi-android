@@ -14,6 +14,8 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
 import io.jeemi.android.JeemiApplication
@@ -22,6 +24,7 @@ import io.jeemi.android.R
 import io.jeemi.android.data.BundledCore
 import io.jeemi.android.domain.RuntimeState
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import mobile.CoreProcess
 import mobile.Mobile
 import java.io.File
@@ -37,8 +40,15 @@ class JeemiVpnService : VpnService() {
     private var shuttingDown = false
     private var destroyed = false
     private var failureOnClose: String? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val statusChecks = Channel<Unit>(Channel.CONFLATED)
     private val app get() = application as JeemiApplication
     private val controller get() = app.runtime
+    override fun onCreate() {
+        super.onCreate()
+        controller.service = this
+    }
+    internal fun requestStatusCheck() { statusChecks.trySend(Unit) }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val stopping = intent?.action == "stop"
         if (shuttingDown || (!stopping && intent?.action != "restart" && session?.isActive == true)) return START_NOT_STICKY
@@ -103,19 +113,21 @@ class JeemiVpnService : VpnService() {
                 val primed = Mobile.primeStartupSelections(request.yaml, choices)
                 if (request.externalUIVersion.isNotEmpty())
                     Mobile.materializeDashboard(noBackupFilesDir.absolutePath, request.externalUIVersion, home.absolutePath)
-                val androidConfig = Mobile.androidSessionConfiguration(primed, secret, port.toLong(), request.ipv6)
+                val androidConfig = Mobile.androidSessionConfiguration(primed, secret, port.toLong(), request.ipv6, request.tunStack.configValue)
                 val config = Mobile.androidDashboardConfiguration(androidConfig, request.externalUIVersion)
                 val diagnostics = org.json.JSONObject(Mobile.prepareDNSDiagnostics(config, secret))
                 File(home, "config.yaml").writeText(diagnostics.getString("configuration"))
                 cache.prepare()
                 ensureActive()
                 val routes = org.json.JSONObject(Mobile.androidVpnRoutes(primed, request.ipv6, Build.VERSION.SDK_INT < 33))
+                val address = routes.getString("address").split('/')
                 val builder = Builder().setSession(getString(R.string.app_name)).setMtu(1500)
-                    .addAddress("172.19.0.1", 30).addDnsServer("172.19.0.2")
+                    .addAddress(address[0], address[1].toInt()).addDnsServer("172.19.0.2")
                     .setBlocking(false)
-                    // The core child shares this UID. Excluding it prevents its
-                    // upstream sockets from being fed back into its own TUN.
-                    .addDisallowedApplication(packageName)
+                // Keep the TCP forwarder inside the VPN; only outbound sockets
+                // are excluded through VpnService.protect on received FD copies.
+                val needsSocketProtection = request.tunStack in listOf(io.jeemi.android.domain.TunStack.SYSTEM, io.jeemi.android.domain.TunStack.MIXED)
+                if (!needsSocketProtection) builder.addDisallowedApplication(packageName)
                 if (request.ipv6) builder.addAddress("fdfe:dcba:9876::1", 126)
                 val included = routes.getJSONArray("include")
                 val excluded = routes.getJSONArray("exclude")
@@ -134,15 +146,20 @@ class JeemiVpnService : VpnService() {
                 if (Build.VERSION.SDK_INT >= 29) builder.setMetered(false)
                 tun = requireNotNull(builder.establish())
                 val fd = ParcelFileDescriptor.dup(requireNotNull(tun).fileDescriptor).detachFd()
-                core = Mobile.startCoreWithOwner(BundledCore(this@JeemiVpnService).executable.absolutePath, home.absolutePath, fd.toLong(), AndroidConnectionOwner(this@JeemiVpnService))
+                core = if (needsSocketProtection) Mobile.startCoreProtected(BundledCore(this@JeemiVpnService).executable.absolutePath, home.absolutePath,
+                    fd.toLong(), AndroidConnectionOwner(this@JeemiVpnService), object : mobile.SocketProtector {
+                        override fun protect(descriptor: Long): Boolean = controller.request === request &&
+                            !shuttingDown && !destroyed && this@JeemiVpnService.protect(descriptor.toInt())
+                    })
+                else Mobile.startCoreWithOwner(BundledCore(this@JeemiVpnService).executable.absolutePath, home.absolutePath,
+                    fd.toLong(), AndroidConnectionOwner(this@JeemiVpnService))
                 val child = requireNotNull(core)
                 val client = CoreApi(port, secret)
                 withTimeout(30_000) {
                     while (true) {
                         ensureActive(); require(child.isRunning())
-                        val ready = runCatching { client.call("/configs").optJSONObject("tun")?.let {
-                            it.optBoolean("enable") && it.optInt("file-descriptor") == 3
-                        } == true }.getOrDefault(false)
+                        if (!ownedTunnelActive(requireNotNull(tun))) throw TunnelDeactivated()
+                        val ready = runCatching { coreTunnelEnabled(client.call("/configs")) }.getOrDefault(false)
                         if (ready) break
                         delay(200)
                     }
@@ -157,6 +174,8 @@ class JeemiVpnService : VpnService() {
                     controller.live.value = LiveSession(request.profileId, request.revision, geoRevision)
                 }
                 controller.refresh(client)
+                if (!ownedTunnelActive(requireNotNull(tun)) || !coreTunnelEnabled(client.call("/configs")))
+                    throw TunnelDeactivated()
                 withContext(Dispatchers.Main.immediate) {
                     ensureActive()
                     if (controller.request !== request) throw CancellationException()
@@ -166,12 +185,26 @@ class JeemiVpnService : VpnService() {
                 connectivity.registerNetworkCallback(NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                     .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(), callback)
                 registered = true
-                while (currentCoroutineContext().isActive) {
-                    delay(1500)
-                    require(child.isRunning())
-                    controller.refresh(client)
+                coroutineScope {
+                    // Keep liveness independent of potentially slow proxy/provider
+                    // snapshots, and wake immediately when the Activity resumes.
+                    launch {
+                        while (isActive) {
+                            ensureActive()
+                            require(child.isRunning())
+                            if (!ownedTunnelActive(requireNotNull(tun)) ||
+                                !coreTunnelEnabled(client.call("/configs", timeout = 1500))) throw TunnelDeactivated()
+                            withTimeoutOrNull(1500) { statusChecks.receive() }
+                        }
+                    }
+                    while (isActive) {
+                        delay(1500)
+                        controller.refresh(client)
+                    }
                 }
             }
+        } catch (_: TunnelDeactivated) {
+            // System revocation / an external TUN switch is a clean stop.
         } catch (_: TimeoutCancellationException) { failed = true; failureCode = core?.tunnelError()?.ifBlank { "tunnel_not_ready" } ?: "core_timeout"
         } catch (_: CancellationException) {
             // Stop/revoke closes both descriptor owners below.
@@ -180,6 +213,10 @@ class JeemiVpnService : VpnService() {
             // Keep state/foreground cleanup inside the non-cancellable scope as
             // well: returning from IO to an already cancelled job can throw.
             withContext(NonCancellable) {
+                // Remove Running before potentially slow process/cache cleanup.
+                // A queued restart keeps ownership of its transition instead.
+                if (controller.service === this@JeemiVpnService && revision == commandRevision && controller.request === request)
+                    controller.state.value = RuntimeState.Stopping
                 withContext(Dispatchers.IO) {
                     if (registered) runCatching { connectivity.unregisterNetworkCallback(callback) }
                     runCatching { core?.stop() }
@@ -205,6 +242,8 @@ class JeemiVpnService : VpnService() {
         stopSelfResult(startId)
     }
     private fun publishClosed() {
+        if (controller.service !== this) return
+        controller.service = null
         controller.clear(failureOnClose != null)
         failureOnClose?.let { controller.state.value = RuntimeState.Failed(it) }
     }
@@ -215,6 +254,22 @@ class JeemiVpnService : VpnService() {
         if (session == null || session?.isCompleted == true) { if (destroyed) publishClosed() }
         else { controller.state.value = RuntimeState.Stopping; session?.cancel() }
     }
-    override fun onRevoke() { failureOnClose = null; cancelAll(); super.onRevoke() }
-    override fun onDestroy() { destroyed = true; cancelAll(); scope.cancel(); super.onDestroy() }
+    override fun onRevoke() {
+        // Android may deliver this Binder callback off the main thread. Serialize
+        // it with start/restart/destroy before touching jobs or publishing state.
+        mainHandler.post {
+            if (!destroyed) {
+                failureOnClose = null
+                cancelAll()
+                stopSelf()
+            }
+        }
+    }
+    override fun onDestroy() {
+        destroyed = true
+        cancelAll()
+        scope.cancel()
+        statusChecks.close()
+        super.onDestroy()
+    }
 }

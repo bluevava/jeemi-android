@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_update_check">Check for updates</string>
+    <string name="app_update_install">Install update</string>
+    <string name="app_update_version">Version %1$s</string>
+    <string name="app_update_checking">Checking the latest release…</string>
+    <string name="app_update_downloading">Downloading %1$s · %2$d%%</string>
+    <string name="app_update_verifying">Verifying the APK…</string>
+    <string name="app_update_current">No update available · latest release %1$s</string>
+    <string name="app_update_ready">Update downloaded · %1$s</string>
+    <string name="app_update_cancelled">Update cancelled</string>
+    <string name="app_update_network_error">Could not check or download the update. Check your network and try again.</string>
+    <string name="app_update_no_release">No published release is available.</string>
+    <string name="app_update_release_error">Release information is incomplete or inconsistent. Try again later.</string>
+    <string name="app_update_incompatible">This release cannot update the installed app. Check the Android version, architecture and app signing identity; development builds cannot install official updates over themselves.</string>
+    <string name="app_update_package_error">APK verification failed or the cached file is missing. Check for updates to download it again.</string>
+    <string name="app_update_storage_error">Not enough storage, or the APK could not be saved.</string>
+    <string name="app_update_permission_error">Installation permission was not granted. Tap Install update to allow this source in system settings and continue.</string>
+    <string name="app_update_installer_error">The system installation screen could not be opened.</string>
+    <string name="help_app_update_purpose">Check the latest published stable release in bluevava/jeemi-android. A newer version is downloaded automatically for this device architecture.</string>
+    <string name="help_app_update_scenarios">Tap Check for updates to begin. After the download and verification finish, Android opens its installation screen. If required, allow Jeemi to install apps in system settings and return to continue. Installation still requires your confirmation.</string>
+    <string name="help_app_update_cautions">Downloads use network data. Checking only happens after you tap the button; leaving the home page or putting Jeemi in the background cancels an unfinished check or download. No update is installed silently and older versions are not installed. APK size, SHA-256, package name, version, architecture and signing identity are checked. Cancelling system authorization or installation keeps the downloaded APK available for retry. Official releases update official builds signed with the same key; development builds cannot be overwritten. Android may restart the app and interrupt VPN during installation.</string>
+</resources>

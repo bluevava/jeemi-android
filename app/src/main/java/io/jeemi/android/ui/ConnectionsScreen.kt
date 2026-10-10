@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.jeemi.android.R
 import io.jeemi.android.data.isApplicationPackage
+import io.jeemi.android.data.isAppListEnabled
 import io.jeemi.android.data.safeApplicationLabel
 import io.jeemi.android.domain.*
 import io.jeemi.android.runtime.ConnectionRecord
@@ -257,7 +258,8 @@ private fun DetailField(label: Int, value: String, add: (() -> Unit)? = null) {
 
 @Composable
 private fun ConnectionRuleDialog(row: ConnectionRecord, initial: String, state: AppState, model: JeemiViewModel, dismiss: () -> Unit) {
-    var targetId by rememberSaveable { mutableStateOf("") }
+    val resources = state.library.resources
+    var targetId by rememberSaveable { mutableStateOf(preferredAppRuleSet(resources, initial)) }
     val newId = rememberSaveable { UUID.randomUUID().toString().replace("-", "") }
     val unnamed = stringResource(R.string.unnamed_ruleset)
     var name by rememberSaveable { mutableStateOf(generateSequence(1) { it + 1 }.map { unnamed + it }.first { n -> state.library.resources.none { it.name == n } }) }
@@ -267,31 +269,38 @@ private fun ConnectionRuleDialog(row: ConnectionRecord, initial: String, state: 
     var preview by remember { mutableStateOf<Pair<String, String>?>(null) }
     var invalid by remember { mutableStateOf(false) }
     val input = JSONObject().put("ruleSetId", targetId).put("name", name).put("matchType", type).put("value", value).toString()
-    val resources = state.library.resources
     LaunchedEffect(input, resources) {
         preview = null; invalid = false; delay(180)
         try { preview = input to model.prepareConnectionRule(input, newId).second }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { invalid = true }
     }
-    val existing = resources.filter { it.kind == ResourceKind.RULES && it.formatVersion >= 2 }.filter {
-        val content = JSONObject(it.content)
-        content.optString("sourceType") == "inline" && (content.optString("behavior") == "classical" ||
-            type == "domain" && content.optString("behavior") == "domain" || type == "ip" && content.optString("behavior") == "ipcidr")
-    }
+    val existing = remember(resources, type) { connectionRuleSets(resources, type) }
     EditorDialog(stringResource(R.string.add_connection_rule), state.busy, dismiss, help = ConnectionRuleHelp, footer = {
         Button(onClick = { model.saveConnectionRule(input, newId, resources, dismiss) }, enabled = !state.busy && preview?.first == input && !invalid, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.save)) }
     }) {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ChoiceField(stringResource(R.string.rule_match_type), type,
+            FixedChoiceField(stringResource(R.string.rule_match_type), type,
                 listOf("domain" to stringResource(R.string.rule_domain), "ip" to "IP/CIDR", "processName" to stringResource(R.string.application_package)), !state.busy) {
-                type = it; value = seed(it); targetId = ""
+                type = it; value = seed(it); targetId = preferredAppRuleSet(resources, it)
             }
             OutlinedTextField(value, { value = it.take(4096) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.rule_match_value)) }, enabled = !state.busy)
-            ChoiceField(stringResource(R.string.rule_sets), targetId, listOf("" to stringResource(R.string.new_rule_set)) + existing.map { it.id to it.name }, !state.busy) { targetId = it }
+            val choices = existing.map { it.id to (it.name + if (JSONObject(it.content).isAppListEnabled()) " · " + stringResource(R.string.app_rule_list) else "") }
+            val newChoice = listOf("" to stringResource(R.string.new_rule_set))
+            ChoiceField(stringResource(R.string.rule_sets), targetId, if (type == "processName") choices + newChoice else newChoice + choices, !state.busy) { targetId = it }
             if (targetId.isEmpty()) OutlinedTextField(name, { name = it.take(80) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(stringResource(R.string.name)) }, enabled = !state.busy)
             if (preview?.first == input) SelectionContainer { Text(preview!!.second, Modifier.padding(vertical = 16.dp), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
             if (invalid) Text(stringResource(R.string.rule_entry_invalid), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
+
+internal fun connectionRuleSets(resources: List<LocalResource>, type: String): List<LocalResource> =
+    resources.filter { it.kind == ResourceKind.RULES && it.formatVersion >= 2 }.filter {
+        val content = JSONObject(it.content)
+        content.optString("sourceType") == "inline" && (content.optString("behavior") == "classical" ||
+            type == "domain" && content.optString("behavior") == "domain" || type == "ip" && content.optString("behavior") == "ipcidr")
+    }.sortedBy { if (type == "processName" && JSONObject(it.content).isAppListEnabled()) 0 else 1 }
+
+internal fun preferredAppRuleSet(resources: List<LocalResource>, type: String): String =
+    if (type == "processName") connectionRuleSets(resources, type).firstOrNull { JSONObject(it.content).isAppListEnabled() }?.id.orEmpty() else ""

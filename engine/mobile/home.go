@@ -75,10 +75,24 @@ func UpgradeRuntimePreferences(raw string) (string, error) {
 	return NormalizeRuntimePreferences(string(b))
 }
 
-// The candidate and actual VpnService session share one fixed Android stack.
-const androidTUNStack = "gvisor"
+// The saved Home selection is authoritative over source, local and legacy runtime fields.
+func androidStack(value string) (string, error) {
+	if value == "" {
+		return "mips", nil
+	}
+	switch value {
+	case "system", "gvisor", "mips", "mixed":
+		return value, nil
+	default:
+		return "", fmt.Errorf("invalid_tun_stack")
+	}
+}
 
-func applyHome(contents []byte, raw, mode, geoMode, loader string) ([]byte, error) {
+func applyHome(contents []byte, raw, mode, geoMode, loader, selectedStack string) ([]byte, error) {
+	stack, err := androidStack(selectedStack)
+	if err != nil {
+		return nil, err
+	}
 	var p runtimeconfig.Preferences
 	if raw == "" {
 		raw = "{}"
@@ -113,7 +127,7 @@ func applyHome(contents []byte, raw, mode, geoMode, loader string) ([]byte, erro
 		value any
 	}{
 		{"/geodata-mode", geoMode == "dat"}, {"/geodata-loader", loader}, {"/geo-auto-update", false},
-		{"/tun/enable", true}, {"/tun/stack", androidTUNStack},
+		{"/tun/enable", true}, {"/tun/stack", stack},
 	} {
 		path := item.path
 		raw, _ := yaml.Marshal(item.value)
@@ -123,6 +137,9 @@ func applyHome(contents []byte, raw, mode, geoMode, loader string) ([]byte, erro
 		}
 	}
 	if _, err := androidRouteExclusions(root); err != nil {
+		return nil, err
+	}
+	if _, err := androidTunAddress(root); err != nil {
 		return nil, err
 	}
 	return document.Encode(doc)

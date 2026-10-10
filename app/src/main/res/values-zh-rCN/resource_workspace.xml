@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="binding_script">脚本</string>
+    <string name="binding_config">配置</string>
+    <string name="binding_chain">链式</string>
+    <string name="bind">绑定</string>
+    <string name="unbind">解绑</string>
+    <string name="unbound">未绑定</string>
+    <string name="bind_resource">为%2$s绑定%1$s</string>
+    <string name="unbind_resource">为%2$s解绑%1$s</string>
+    <string name="change_binding">更换%2$s的%1$s绑定</string>
+    <string name="current_binding">当前绑定：%1$s</string>
+    <string name="resource_missing">资源已缺失</string>
+    <string name="search_resources">搜索名称</string>
+    <string name="resource_relationships">配置关系链</string>
+    <string name="relationship_count">关系链 · %1$d 份订阅</string>
+    <string name="referenced_by">被引用</string>
+    <string name="references_to">引用资源</string>
+    <string name="affected_subscriptions">受影响订阅</string>
+    <string name="local_handler">本地处理</string>
+    <string name="check_preview">检测预览</string>
+    <string name="resource_structure_valid">资源与引用检查通过</string>
+    <string name="candidates_checked">内核静态检测：%1$d / %2$d 通过</string>
+    <string name="no_candidate_checked">无关联订阅，未检测订阅候选</string>
+    <string name="candidate_check_passed">组合与内核静态检测通过</string>
+    <string name="candidate_check_failed">候选检测失败，请检查资源内容与引用</string>
+    <string name="associated_only">所有关联订阅</string>
+    <string name="script_text_source">本地源码</string>
+    <string name="script_url_source">URL 来源 · 已缓存源码</string>
+    <string name="config_resource_facts">%1$d 个启用字段 · %2$d 个策略组引用</string>
+    <string name="rule_reference_count">%1$d 个规则集引用</string>
+    <string name="selector_parameters">选择器参数</string>
+    <string name="node_filtering">节点筛选</string>
+    <string name="rule_source_options">来源与格式</string>
+    <string name="help_relationships_purpose">按稳定 ID 查看订阅、本地脚本或配置、策略组、规则集及链式代理的引用关系。</string>
+    <string name="help_relationships_scenarios">从资源卡片或编辑器打开关系链，查看引用它的上游、它引用的下游及受影响订阅；点击条目沿关系浏览。停用引用仍保留并标记，间接引用也计入关联数量。</string>
+    <string name="help_relationships_cautions">脚本与本地配置互斥；本地配置有序引用策略组，策略组引用规则集，链式绑定独立。规则总开关或组开关关闭不删除引用；同一规则集只能属于一个策略组。脚本源码和备注中的文字不作为关联。缺失资源需修复引用；运行中的修改待重启生效。</string>
+    <string name="help_resource_check_purpose">检查当前草稿的资源结构、完整引用关系及所有关联订阅的组合候选，并使用内置 mihomo 做静态检测。</string>
+    <string name="help_resource_check_scenarios">保存前查看受影响订阅及各自结果，通过的候选可以打开 YAML。脚本或本地配置可另选一份订阅临时测试；策略组和规则集沿现有配置关系测试，链式节点与来源可以在编辑时检测预览。</string>
+    <string name="help_resource_check_cautions">预览不保存资源或绑定，不启动 VPN。没有关联订阅时只做资源与引用检查；新 URL 预览会按主动操作下载但不提交。保存会重新检测，失败保留旧库和草稿。静态通过不代表真实节点连通，YAML 可能含凭据，导出前请确认。</string>
+</resources>

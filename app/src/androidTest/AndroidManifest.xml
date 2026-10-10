@@ -1,7 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
     <application android:usesCleartextTraffic="true">
         <!-- Separate APK UID: its traffic must cross VPN, unlike the excluded core UID. -->
         <activity android:name="io.jeemi.android.testprobe.TrafficProbeActivity" android:exported="true" />
+        <activity android:name="io.jeemi.android.testprobe.CompetingVpnActivity" android:exported="true" />
+        <service android:name="io.jeemi.android.testprobe.CompetingVpnService"
+            android:exported="true" android:permission="android.permission.BIND_VPN_SERVICE"
+            android:foregroundServiceType="systemExempted">
+            <intent-filter><action android:name="android.net.VpnService" /></intent-filter>
+            <meta-data android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON" android:value="false" />
+        </service>
     </application>
 </manifest>

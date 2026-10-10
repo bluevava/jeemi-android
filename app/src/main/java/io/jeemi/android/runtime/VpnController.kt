@@ -17,7 +17,7 @@ import java.security.MessageDigest
 
 data class VpnRequest(val profileId: String, val yaml: String, val ipv6: Boolean, val revision: String = configurationRevision(yaml), val logLevel: String = "silent",
     val selections: Map<String, String> = emptyMap(), val defaults: Map<String, String> = emptyMap(),
-    val externalUIVersion: String = "")
+    val externalUIVersion: String = "", val tunStack: io.jeemi.android.domain.TunStack = io.jeemi.android.domain.TunStack.MIPS)
 data class LiveProxy(val type: String, val now: String, val members: List<String>, val delay: Int?, val manualDelay: Int? = null)
 data class LiveSession(val profileId: String, val revision: String, val geoRevision: String,
     val proxies: Map<String, LiveProxy> = emptyMap(), val sessionId: String = java.util.UUID.randomUUID().toString())
@@ -31,6 +31,14 @@ class VpnController(private val context: Context) {
     @Volatile internal var request: VpnRequest? = null
     @Volatile internal var api: CoreApi? = null
     @Volatile internal var dnsSession: JSONObject? = null
+    // Service ownership and UI reconciliation run on the main thread. A resume
+    // only wakes the existing observer; it never starts or prepares a VPN.
+    internal var service: JeemiVpnService? = null
+    fun reconcile() {
+        if (state.value !is RuntimeState.Running) return
+        val owner = service
+        if (owner == null) clear(false) else owner.requestStatusCheck()
+    }
     fun start(next: VpnRequest) {
         if (state.value.transitioning || state.value is RuntimeState.Running) return
         request = next

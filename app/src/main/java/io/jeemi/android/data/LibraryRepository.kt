@@ -32,6 +32,7 @@ class LibraryRepository(directory: File) {
             preferences = Preferences(
                 theme = AppTheme.valueOf(preferences.getString("theme")),
                 mode = ProxyMode.valueOf(preferences.getString("mode")),
+                tunStack = TunStack.restored(preferences.optString("tunStack")),
                 overrideMode = preferences.getBoolean("overrideMode"),
                 runtimeValues = preferences.optJSONObject("runtimeValues")?.let { values -> values.keys().asSequence().associateWith { values.getString(it) } } ?: emptyMap(),
                 nodeSort = NodeSort.valueOf(preferences.optString("nodeSort", "ORIGINAL")),
@@ -53,7 +54,9 @@ class LibraryRepository(directory: File) {
                     item.optInt("formatVersion", 1), item.optString("description"), item.optString("sourceUrl"))
             } } ?: emptyList(),
             chainLibrary = mobile.Mobile.normalizeChainLibrary(json.optJSONObject("chainLibrary")?.toString().orEmpty()),
+            bundledRoutingVersion = json.optInt("bundledRoutingVersion", 0),
         )
+        require(library.bundledRoutingVersion in 0..1)
         require(library.selectedId == null || library.selected != null)
         require(library.subscriptions.map { it.id }.distinct().size == library.subscriptions.size)
         require(library.resources.map { it.id }.distinct().size == library.resources.size)
@@ -65,9 +68,11 @@ class LibraryRepository(directory: File) {
     fun save(library: Library) {
         val preferences = library.preferences
         val json = JSONObject().put("schemaVersion", 5).put("selectedId", library.selectedId ?: "")
+            .put("bundledRoutingVersion", library.bundledRoutingVersion)
             .put("chainLibrary", JSONObject(mobile.Mobile.normalizeChainLibrary(library.chainLibrary)))
             .put("preferences", JSONObject().put("theme", preferences.theme.name)
                 .put("mode", preferences.mode.name)
+                .put("tunStack", preferences.tunStack.name)
                 .put("overrideMode", preferences.overrideMode)
                 .put("runtimeValues", JSONObject(preferences.runtimeValues))
                 .put("nodeSort", preferences.nodeSort.name).put("compactNodes", preferences.compactNodes)

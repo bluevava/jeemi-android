@@ -2,6 +2,12 @@ package io.jeemi.android.domain
 
 enum class AppTheme { SYSTEM, LIGHT, DARK }
 enum class ProxyMode(val configValue: String) { RULE("rule"), GLOBAL("global"), DIRECT("direct") }
+enum class TunStack(val configValue: String, val title: String) {
+    SYSTEM("system", "system"), GVISOR("gvisor", "gVisor"), MIPS("mips", "mips"), MIXED("mixed", "mixed");
+    companion object {
+        fun restored(value: String): TunStack = entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: MIPS
+    }
+}
 enum class Destination { HOME, SUBSCRIPTIONS, CONFIG, MORE }
 enum class ToolPage { CONNECTIONS, LOGS, DNS, CORE, GEO, ABOUT }
 enum class ResourceKind { CONFIG, SCRIPT, GROUPS, RULES }
@@ -58,6 +64,7 @@ data class Subscription(
 data class Preferences(
     val theme: AppTheme = AppTheme.SYSTEM,
     val mode: ProxyMode = ProxyMode.RULE,
+    val tunStack: TunStack = TunStack.MIPS,
     val overrideMode: Boolean = true,
     val runtimeValues: Map<String, String> = emptyMap(),
     val nodeSort: NodeSort = NodeSort.ORIGINAL,
@@ -79,6 +86,7 @@ data class Library(
     val preferences: Preferences = Preferences(),
     val resources: List<LocalResource> = emptyList(),
     val chainLibrary: String = EMPTY_CHAIN_LIBRARY,
+    val bundledRoutingVersion: Int = 0,
 ) {
     val selected: Subscription? get() = subscriptions.firstOrNull { it.id == selectedId }
     fun selecting(id: String): Library {

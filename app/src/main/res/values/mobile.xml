@@ -37,7 +37,7 @@
     <string name="none_items">None</string>
     <string name="test_profile">Test subscription</string>
     <string name="test_candidate">Test candidate</string>
-    <string name="field_locked">Managed by Home or routing plan</string>
+    <string name="field_locked">Locked</string>
     <string name="field_conflict">Name conflicts</string>
     <string name="conflict_error">Reject conflicts</string>
     <string name="conflict_local">Prefer local</string>
@@ -128,10 +128,10 @@
     <string name="help_display_scenarios">Large, medium and small show one, two and three nodes per row. Large text reduces the column count.</string>
     <string name="help_display_cautions">Latency and current-node data come only from the matching running session. Offline candidates never invent test results.</string>
     <string name="help_package_purpose">Import or export desktop Jeemi versioned JSON packages containing a local configuration and its full dependency graph, or one script.</string>
-    <string name="help_package_scenarios">Use packages to share routing plans. Import previews list additions, replacements and affected subscriptions.</string>
+    <string name="help_package_scenarios">Use packages to share routing plans. Import previews list additions, replacements and affected subscriptions. Import opens the system file picker. To cancel without choosing a file, swipe inward from the left or right edge of the screen, or tap the system Back button when using three-button navigation. You return to the editor with your draft preserved.</string>
     <string name="help_package_cautions">The library changes only after confirmation and validation of all affected subscriptions. A changed library requires a new preview. Desktop packages include enabled custom fields; disabled field drafts stay on this device.</string>
     <string name="help_appearance_purpose">Choose a light, dark or system theme and an application language.</string>
-    <string name="help_appearance_scenarios">These preferences apply to all four pages. Save to apply them, or cancel to keep the previous selection.</string>
+    <string name="help_appearance_scenarios">Choose a theme directly on Home; it applies after saving automatically. Edit language in Settings, then Save to apply or Cancel to keep the previous selection.</string>
     <string name="help_appearance_cautions">Theme and language changes preserve the resource library. Language also follows the Android application language setting.</string>
     <string name="add_subscription">Add subscription</string>
     <string name="vpn_quick_start">Start proxy</string>

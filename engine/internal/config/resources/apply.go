@@ -48,6 +48,10 @@ func RuleProviderCount(input Plan, state State) (int, error) {
 		groups[group.ID] = group
 	}
 	providers := make(map[string]struct{})
+	ruleSets := make(map[string]RuleSet, len(state.RuleSets))
+	for _, ruleSet := range state.RuleSets {
+		ruleSets[ruleSet.ID] = ruleSet
+	}
 	for _, id := range plan.StrategyGroupIDs {
 		if !plan.GroupEnabled(id) {
 			continue
@@ -57,6 +61,9 @@ func RuleProviderCount(input Plan, state State) (int, error) {
 			continue
 		}
 		for _, reference := range group.RuleSetReferences {
+			if emptyLocalRuleSet(ruleSets[reference.RuleSetID]) {
+				continue
+			}
 			providers[reference.RuleSetID] = struct{}{}
 		}
 	}
@@ -124,7 +131,7 @@ func Apply(contents []byte, state State, input Plan) ([]byte, error) {
 
 	result := contents
 	if len(selectorIDs) > 0 {
-		selectors, materializeErr := materializeSelectors(selectorIDs, groupsByID, proxies)
+		selectors, materializeErr := materializeSelectors(selectorIDs, groupsByID, proxies, document.Root(configuration))
 		if materializeErr != nil {
 			return nil, materializeErr
 		}
@@ -266,7 +273,7 @@ func proxiesFromRoot(root *yaml.Node) ([]proxyRecord, error) {
 	return result, nil
 }
 
-func materializeSelectors(ids []string, available map[string]StrategyGroup, proxies []proxyRecord) (*yaml.Node, error) {
+func materializeSelectors(ids []string, available map[string]StrategyGroup, proxies []proxyRecord, root *yaml.Node) (*yaml.Node, error) {
 	sequence := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
 	for _, id := range ids {
 		group, found := available[id]
@@ -288,6 +295,20 @@ func materializeSelectors(ids []string, available map[string]StrategyGroup, prox
 			setScalar(mapping, "icon", group.Icon)
 		}
 		setStringSequence(mapping, "proxies", members)
+		if group.IncludeAllProviders {
+			// Keep remote members opaque; mihomo loads them for the active session.
+			providers, found, err := document.Find(root, "/proxy-providers")
+			if err != nil || (found && providers.Kind != yaml.MappingNode) {
+				return nil, fmt.Errorf("proxy providers must be a mapping")
+			}
+			if found && len(providers.Content) > 0 {
+				names := make([]string, 0, len(providers.Content)/2)
+				for index := 0; index < len(providers.Content); index += 2 {
+					names = append(names, providers.Content[index].Value)
+				}
+				setStringSequence(mapping, "use", names)
+			}
+		}
 		if group.Type != "select" {
 			setScalar(mapping, "url", group.URL)
 			setInt(mapping, "interval", group.Interval)
@@ -328,6 +349,10 @@ func materializeStrategyRules(
 			if !found {
 				return nil, nil, fmt.Errorf("referenced rule set no longer exists")
 			}
+			// Empty editable placeholders produce neither providers nor matching rules.
+			if emptyLocalRuleSet(ruleSet) {
+				continue
+			}
 			if group.RuleOutput == RuleOutputInline {
 				expanded, expandErr := expandInlineRuleSet(ruleSet, target)
 				if expandErr != nil {
@@ -351,6 +376,10 @@ func materializeStrategyRules(
 		}
 	}
 	return providers, rules, nil
+}
+
+func emptyLocalRuleSet(ruleSet RuleSet) bool {
+	return ruleSet.SourceType == "inline" && len(ruleSet.Payload) == 0
 }
 
 func strategyRuleTarget(group StrategyGroup, groups map[string]StrategyGroup, proxySelectorID string) (string, error) {

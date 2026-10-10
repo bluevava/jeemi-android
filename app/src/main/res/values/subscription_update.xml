@@ -5,6 +5,7 @@
     <string name="refresh_subscription">Refresh %1$s</string>
     <string name="vpn_permission_denied">VPN authorization was cancelled or denied.</string>
     <string name="vpn_permission_unavailable">System VPN authorization is unavailable.</string>
+    <string name="vpn_permission_on_start">Checked by the system when starting</string>
     <string name="scan_subscription_qr">Scan subscription QR code</string>
     <string name="camera_permission_denied">Camera access was denied. You can enable it in system settings or paste the subscription URL.</string>
     <string name="camera_unavailable">Camera unavailable. Close the scanner and try again.</string>
@@ -31,9 +32,9 @@
     <string name="scan_purpose">Read a subscription URL from a QR code with the camera.</string>
     <string name="scan_scenarios">Tap the scanner beside the URL field and grant camera access. A valid HTTP/HTTPS result fills the field for review.</string>
     <string name="scan_cautions">Recognition runs on this device without Google Play services. Camera frames are neither saved nor uploaded. Scanning does not import or open the URL; closing or backgrounding the scanner releases the camera.</string>
-    <string name="permissions_purpose">Review system VPN, notification and camera authorization.</string>
+    <string name="permissions_purpose">Open system VPN settings and review notification and camera authorization.</string>
     <string name="permissions_scenarios">VPN consent is requested when connecting. Android 13 or later requests notification permission on first connection. Camera access is requested only when scanning.</string>
-    <string name="permissions_cautions">Denying notifications does not prevent VPN, but its notification may be hidden. Denying camera access still allows pasted URLs and text. Revoking VPN closes the tunnel and core; no root, storage or battery exemption is required.</string>
+    <string name="permissions_cautions">The system confirms VPN consent when you explicitly start it; opening this page never switches or takes over another VPN. Denying notifications does not prevent VPN, but its notification may be hidden. Denying camera access still allows pasted URLs and text. Revoking VPN closes the tunnel and core; no root, storage or battery exemption is required.</string>
     <plurals name="seconds_ago">
         <item quantity="one">%1$d second ago</item>
         <item quantity="other">%1$d seconds ago</item>

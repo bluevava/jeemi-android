@@ -61,11 +61,16 @@ func normalizeRuleSetPayloadYAML(source string) (string, []string, error) {
 	if key.Kind != yaml.ScalarNode || key.Tag != "!!str" || key.Value != "payload" || key.Anchor != "" || key.Alias != nil {
 		return "", nil, fmt.Errorf("inline rule set YAML only allows the payload field")
 	}
+	// The local editor accepts a bare payload header as an empty list. Keep
+	// its source text/comments, but never pass YAML null into the composer.
+	if implicitEmptyRuleSetPayload(payload) {
+		return source, []string{}, nil
+	}
 	if payload.Kind != yaml.SequenceNode || payload.Tag != "!!seq" || payload.Anchor != "" || payload.Alias != nil {
 		return "", nil, fmt.Errorf("inline rule set payload must be a list without anchors or aliases")
 	}
-	if len(payload.Content) == 0 || len(payload.Content) > maxPayloadRules {
-		return "", nil, fmt.Errorf("inline rule set payload must contain 1-%d rules", maxPayloadRules)
+	if len(payload.Content) > maxPayloadRules {
+		return "", nil, fmt.Errorf("inline rule set payload must contain at most %d rules", maxPayloadRules)
 	}
 
 	rules := make([]string, 0, len(payload.Content))
@@ -80,6 +85,11 @@ func normalizeRuleSetPayloadYAML(source string) (string, []string, error) {
 		rules = append(rules, rule)
 	}
 	return source, rules, nil
+}
+
+func implicitEmptyRuleSetPayload(payload *yaml.Node) bool {
+	return payload.Kind == yaml.ScalarNode && payload.Tag == "!!null" && payload.Value == "" &&
+		payload.Style == 0 && payload.Anchor == "" && payload.Alias == nil
 }
 
 func validateRuleSetPayloadRules(behavior string, payload []string) error {

@@ -77,11 +77,9 @@ internal fun SubscriptionImportDialog(item: Subscription?, state: AppState, mode
         }
     }, help = ImportHelp) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (item == null) SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                listOf(R.string.from_url, R.string.from_text).forEachIndexed { i, label ->
-                    SegmentedButton(method == i, { method = i }, SegmentedButtonDefaults.itemShape(i, 2), enabled = !state.busy) { Text(stringResource(label)) }
-                }
-            }
+            if (item == null) SegmentedChoice(stringResource(R.string.import_action), method.toString(),
+                listOf("0" to stringResource(R.string.from_url), "1" to stringResource(R.string.from_text)),
+                enabled = !state.busy, showLabel = false) { method = it.toInt() }
             OutlinedTextField(name, { name = it.take(80) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.subscription_name_optional)) }, singleLine = true, enabled = !state.busy)
             if (method == 0 || item != null) OutlinedTextField(url, { url = it.take(8192) }, Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.subscription_url)) }, singleLine = true, enabled = !state.busy,

@@ -2,14 +2,23 @@ package io.jeemi.android.data
 
 import java.net.HttpURLConnection
 import java.net.URI
+import java.net.URL
 import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
 import java.util.zip.GZIPInputStream
 import java.io.ByteArrayOutputStream
+import java.io.EOFException
+import java.io.IOException
 import java.io.InterruptedIOException
 import java.util.concurrent.TimeUnit
 
+internal typealias SubscriptionRoute = (URL) -> HttpURLConnection
+
 /** Explicit user initiated requests only. No cookies, logs or background refresh. */
-class SubscriptionFetcher {
+class SubscriptionFetcher internal constructor(
+    private val openConnection: SubscriptionRoute = { it.openConnection() as HttpURLConnection },
+    private val directFallback: () -> SubscriptionRoute? = { null }
+) {
     var suggestedName: String = ""
         private set
     var usage: Map<String, Long> = emptyMap()
@@ -20,34 +29,64 @@ class SubscriptionFetcher {
     fun cancel() { isCancelled = true; active?.disconnect() }
 
     fun fetch(address: String): String {
-        var uri = requireSubscriptionUrl(address)
         usage = emptyMap(); suggestedName = ""
+        val original = requireSubscriptionUrl(address)
+        checkCancellation()
+        try {
+            return download(original, openConnection)
+        } catch (_: IOException) {
+            // Resolve a route only after acquisition fails. Never retry a
+            // cancelled operation or a later normalization/validation failure.
+            checkCancellation()
+            val direct = directFallback() ?: throw IOException("subscription_download_failed")
+            checkCancellation()
+            try { return download(original, direct) }
+            catch (_: IOException) {
+                checkCancellation()
+                // Network exceptions can contain signed subscription URLs.
+                throw IOException("subscription_direct_retry_failed")
+            }
+        }
+    }
+
+    private fun checkCancellation() {
+        if (isCancelled || Thread.currentThread().isInterrupted) throw InterruptedIOException("download_cancelled")
+    }
+
+    private fun download(original: URI, route: SubscriptionRoute): String {
+        var uri = original
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
         fun checkDeadline() {
-            if (isCancelled || System.nanoTime() > deadline) throw InterruptedIOException("download_cancelled_or_timed_out")
+            checkCancellation()
+            if (System.nanoTime() > deadline) throw InterruptedIOException("download_timed_out")
         }
         repeat(6) { redirect ->
             checkDeadline()
             require(uri.scheme in listOf("https", "http") && !uri.host.isNullOrBlank() && uri.userInfo == null)
-            val connection = uri.toURL().openConnection() as HttpURLConnection
+            val connection = route(uri.toURL())
             active = connection
             try {
-                connection.connectTimeout = 10_000
-                connection.readTimeout = 20_000
+                checkDeadline()
+                val remaining = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime()).coerceIn(1, 30_000).toInt()
+                connection.connectTimeout = minOf(10_000, remaining)
+                connection.readTimeout = minOf(20_000, remaining)
                 connection.instanceFollowRedirects = false
                 connection.useCaches = false
                 connection.setRequestProperty("User-Agent", "Jeemi subscription client")
                 connection.setRequestProperty("Accept", "application/yaml, application/json, text/yaml, text/plain, */*")
                 connection.setRequestProperty("Accept-Encoding", "gzip")
                 val status = connection.responseCode
+                checkDeadline()
                 if (status in listOf(301, 302, 303, 307, 308)) {
                     require(redirect < 5)
                     val next = uri.resolve(connection.getHeaderField("Location") ?: error("redirect_missing"))
                     require(uri.scheme != "https" || next.scheme == "https")
                     uri = next
                 } else {
-                    require(status == 200 && connection.contentLengthLong <= 4 * 1024 * 1024)
-                    val input = if (connection.contentEncoding.equals("gzip", true)) GZIPInputStream(connection.inputStream) else connection.inputStream
+                    if (status != 200) throw IOException("subscription_http_$status")
+                    require(connection.contentLengthLong <= 4 * 1024 * 1024)
+                    val compressed = connection.contentEncoding.equals("gzip", true)
+                    val input = if (compressed) GZIPInputStream(connection.inputStream) else connection.inputStream
                     val bytes = input.use { stream ->
                         val output = ByteArrayOutputStream()
                         val buffer = ByteArray(8192)
@@ -63,10 +102,15 @@ class SubscriptionFetcher {
                         checkDeadline()
                         output.toByteArray()
                     }
+                    if (!compressed && connection.contentLengthLong >= 0 && bytes.size.toLong() != connection.contentLengthLong)
+                        throw EOFException("subscription_body_truncated")
+                    val text = try { Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString() }
+                    catch (_: CharacterCodingException) { throw IllegalArgumentException("invalid_subscription_utf8") }
+                    checkDeadline()
                     usage = parseSubscriptionUsage(connection.getHeaderField("Subscription-Userinfo").orEmpty())
                     suggestedName = subscriptionHeaderName(connection.getHeaderField("Profile-Title").orEmpty(),
                         connection.getHeaderField("Subscription-Userinfo").orEmpty())
-                    return Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString()
+                    return text
                 }
             } finally { connection.disconnect(); active = null }
         }

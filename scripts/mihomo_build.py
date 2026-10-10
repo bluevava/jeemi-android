@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tarfile
+import tempfile
 import urllib.request
 import dev
 import mihomo
@@ -29,8 +30,10 @@ def source_tree():
         raise RuntimeError("Mihomo source digest mismatch.")
     patch = json.loads((RES / "vpn-fd-patch.json").read_text(encoding="utf-8"))
     stamp = hashlib.sha256(archive.read_bytes() + (RES / "vpn-fd-patch.json").read_bytes()).hexdigest()
-    destination = ROOT / "temp/core-source" / stamp[:16]
-    destination.mkdir(parents=True, exist_ok=True)
+    workspace = ROOT / "temp/core-source"
+    workspace.mkdir(parents=True, exist_ok=True)
+    # Every build starts clean: prior patches or extra Go files must not enter it.
+    destination = Path(tempfile.mkdtemp(prefix=stamp[:16] + "-", dir=workspace))
     # Extraction uses Python's data filter and the immutable input archive.
     with tarfile.open(archive) as source:
         source.extractall(destination, filter="data")
@@ -68,7 +71,7 @@ def build(update_lock=False):
                     "CC": str(compiler / ("clang.exe" if os.name == "nt" else "clang")) + " --target=" + target}
         flags = "-s -w -buildid= -extldflags=-Wl,-z,max-page-size=16384 " + \
             "-X github.com/metacubex/mihomo/constant.Version=" + spec["version"] + \
-            " -X github.com/metacubex/mihomo/constant.BuildTime=2026-09-09T00:00:00Z"
+            " -X github.com/metacubex/mihomo/constant.BuildTime=" + spec.get("buildTime", "2026-09-09T00:00:00Z")
         dev.run(["go", "build", "-trimpath", "-buildvcs=false", "-tags=with_gvisor", "-ldflags=" + flags,
                  "-o", output, "."], cwd=source, env=core_env)
         data = output.read_bytes()

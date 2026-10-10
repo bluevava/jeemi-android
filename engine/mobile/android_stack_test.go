@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestAndroidFixedStackOverridesSourceAndLocalProcessing(t *testing.T) {
+func TestAndroidSelectedStackOverridesSourceAndLocalProcessing(t *testing.T) {
 	source := "tun: {enable: false, stack: invalid, auto-route: true, device: desktop}\nrules: ['MATCH,DIRECT']\n"
 	for _, handler := range []resourceInput{
 		{},
@@ -16,51 +16,53 @@ func TestAndroidFixedStackOverridesSourceAndLocalProcessing(t *testing.T) {
 			Content: `function main(config) { config.tun = {enable: false, stack: "system"}; return config; }`},
 	} {
 		t.Run(handler.ID, func(t *testing.T) {
-			input := workspaceInput{Configuration: source}
-			if handler.ID != "" {
-				input.HandlerID, input.Resources = handler.ID, []resourceInput{handler}
+			for _, selected := range []string{"system", "gvisor", "mips", "mixed"} {
+				input := workspaceInput{Configuration: source, TunStack: selected}
+				if handler.ID != "" {
+					input.HandlerID, input.Resources = handler.ID, []resourceInput{handler}
+				}
+				candidate := projectTest(t, input)
+				assertAndroidTunFields(t, candidate.YAML, map[string]string{"/tun/stack": selected, "/tun/enable": "true"})
 			}
-			candidate := projectTest(t, input)
-			assertAndroidTunFields(t, candidate.YAML, map[string]string{"/tun/stack": "gvisor", "/tun/enable": "true"})
 		})
 	}
 }
 
-func TestAndroidIgnoresRetiredStackPreference(t *testing.T) {
-	input := map[string]any{"configuration": "rules: ['MATCH,DIRECT']\n", "mode": "rule", "geoMode": "mmdb", "geoLoader": "memconservative"}
-	baseline, err := ComposeWorkspace(jsonText(t, input))
-	if err != nil {
-		t.Fatal(err)
+func TestAndroidStackDefaultsAndRejectsUnknownSelection(t *testing.T) {
+	input := workspaceInput{Configuration: "rules: ['MATCH,DIRECT']\n"}
+	candidate := projectTest(t, input)
+	assertAndroidTunFields(t, candidate.YAML, map[string]string{"/tun/stack": "mips"})
+	input.TunStack = "invalid"
+	if _, err := ComposeWorkspace(jsonText(t, input)); err == nil {
+		t.Fatal("invalid stack accepted")
 	}
-	for _, legacy := range []string{"system", "gvisor", "mixed", "invalid"} {
-		input["tunStack"] = legacy
-		got, err := ComposeWorkspace(jsonText(t, input))
-		if err != nil || got != baseline {
-			t.Fatalf("retired preference %q changed the candidate: %v", legacy, err)
-		}
+	if _, err := AndroidSessionConfiguration(candidate.YAML, strings.Repeat("s", 64), 19090, false, "invalid"); err == nil {
+		t.Fatal("invalid session stack accepted")
 	}
 }
 
 func TestAndroidSessionForcesStackEvenForStaleCandidates(t *testing.T) {
-	for _, stack := range []string{"system", "gvisor", "mixed", "invalid"} {
+	for _, stack := range []string{"system", "gvisor", "mips", "mixed", "invalid"} {
 		for _, ipv6 := range []bool{false, true} {
-			source := "tun: {enable: false, stack: " + stack + ", auto-route: true, device: desktop, route-exclude-address: [198.51.100.0/24]}\nrules: ['MATCH,DIRECT']\n"
-			session, err := AndroidSessionConfiguration(source, strings.Repeat("s", 64), 19090, ipv6)
-			if err != nil {
-				t.Fatal(err)
-			}
-			assertAndroidTunFields(t, session, map[string]string{"/tun/stack": "gvisor", "/tun/enable": "true",
-				"/tun/file-descriptor": "3", "/tun/auto-route": "false", "/tun/auto-redirect": "false"})
-			doc, _ := document.Parse([]byte(session))
-			root := document.Root(doc)
-			if _, found, _ := document.Find(root, "/tun/device"); found {
-				t.Fatal("source device leaked")
-			}
-			if _, found, _ := document.Find(root, "/tun/inet6-address"); found != ipv6 {
-				t.Fatal("IPv6 ownership changed")
-			}
-			if !strings.Contains(session, "198.51.100.0/24") {
-				t.Fatal("validated route exclusion lost")
+			for _, selected := range []string{"system", "gvisor", "mips", "mixed"} {
+				source := "tun: {enable: false, stack: " + stack + ", auto-route: true, device: desktop, route-exclude-address: [198.51.100.0/24]}\nrules: ['MATCH,DIRECT']\n"
+				session, err := AndroidSessionConfiguration(source, strings.Repeat("s", 64), 19090, ipv6, selected)
+				if err != nil {
+					t.Fatal(err)
+				}
+				assertAndroidTunFields(t, session, map[string]string{"/tun/stack": selected, "/tun/enable": "true",
+					"/tun/file-descriptor": "3", "/tun/auto-route": "false", "/tun/auto-redirect": "false"})
+				doc, _ := document.Parse([]byte(session))
+				root := document.Root(doc)
+				if _, found, _ := document.Find(root, "/tun/device"); found {
+					t.Fatal("source device leaked")
+				}
+				if _, found, _ := document.Find(root, "/tun/inet6-address"); found != ipv6 {
+					t.Fatal("IPv6 ownership changed")
+				}
+				if !strings.Contains(session, "198.51.100.0/24") {
+					t.Fatal("validated route exclusion lost")
+				}
 			}
 		}
 	}

@@ -62,6 +62,7 @@ const (
 
 var (
 	defaultDNSNameservers = []string{
+		"https://dns.alidns.com/dns-query",
 		"114.114.114.114",
 		"223.5.5.5",
 	}

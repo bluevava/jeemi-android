@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package io.jeemi.android.ui
 
 import androidx.compose.foundation.clickable
@@ -40,6 +41,8 @@ internal val ConversionHelp = HelpContent(R.string.conversion_details, R.string.
 
 @Composable
 internal fun ChainProxyScreen(state: AppState, model: JeemiViewModel, modifier: Modifier) {
+    var relationshipKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var query by rememberSaveable { mutableStateOf("") }
     var expanded by rememberSaveable { mutableStateOf(listOf<String>()) }
     var chooseKind by rememberSaveable { mutableStateOf(false) }
     var deleting by rememberSaveable { mutableStateOf<List<String>?>(null) }
@@ -64,10 +67,14 @@ internal fun ChainProxyScreen(state: AppState, model: JeemiViewModel, modifier: 
                     Icon(Icons.Outlined.Add, stringResource(R.string.chain_add_group))
                 }
             }
+            OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), singleLine = true,
+                label = { Text(stringResource(R.string.search_resources)) }, leadingIcon = { Icon(Icons.Outlined.Search, null) })
             if (state.chainBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
         }
         if (state.chains.groups.isEmpty()) item { EmptyCard(stringResource(R.string.chain_empty), ChainHelp) }
-        state.chains.groups.forEach { group ->
+        val visible = state.chains.groups.filter { it.name.contains(query, true) }
+        if (visible.isEmpty() && query.isNotBlank()) item { Text(stringResource(R.string.no_results)) }
+        visible.forEach { group ->
             item(key = "group-${group.id}") {
                 Card(Modifier.fillMaxWidth(), shape = JeemiShapes.Panel, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                     Column(Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
@@ -83,9 +90,13 @@ internal fun ChainProxyScreen(state: AppState, model: JeemiViewModel, modifier: 
                             Icon(if (group.id in expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                                 stringResource(if (group.id in expanded) R.string.collapse else R.string.expand))
                         }
-                        if (group.id in expanded) Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.associated_count, state.library.subscriptions.count { group.id in it.chainGroupIds }),
-                                Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            RelationshipButton(state.resourceGraph, "chain:${group.id}") { relationshipKey = "chain:${group.id}" }
+                            TextButton(onClick = { model.previewChainGroup(group.id) }, enabled = enabled, shape = MaterialTheme.shapes.small) {
+                                Text(stringResource(R.string.check_preview))
+                            }
+                        }
+                        if (group.id in expanded) FlowRow(horizontalArrangement = Arrangement.End) {
                             IconButton(onClick = { model.openChainGroup(group) }, enabled = enabled) { Icon(Icons.Outlined.Edit, stringResource(R.string.edit)) }
                             if (group.kind == "subscription") IconButton(onClick = { model.refreshChains(group.id) }, enabled = enabled && group.sources.isNotEmpty()) {
                                 Icon(Icons.Outlined.Refresh, stringResource(R.string.chain_refresh_group))
@@ -152,6 +163,7 @@ internal fun ChainProxyScreen(state: AppState, model: JeemiViewModel, modifier: 
         dismissButton = { TextButton(onClick = { deleting = null }, enabled = !state.busy, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.cancel)) } },
         confirmButton = { TextButton(onClick = { model.deleteChainItem(values[0], values[1], values[2], values[3].toInt()) { deleting = null } }, enabled = enabled, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.delete)) } }) }
     draft?.let { ChainEditor(it, state, model) }
+    relationshipKey?.let { ResourceRelationshipsDialog(state.resourceGraph, it) { relationshipKey = null } }
 }
 
 private fun chainDate(value: String): String = runCatching {
@@ -168,9 +180,14 @@ private fun ChainEditor(draft: ChainDraft, state: AppState, model: JeemiViewMode
     val help = when (draft.mode) { "group" -> ChainHelp; "source" -> ChainSourceHelp; else -> ChainNodesHelp }
     EditorDialog(stringResource(title), state.busy, model::closeChainEditor, help = help, footer = {
         if (state.chainBusy) TextButton(onClick = model::cancelChainNetwork, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.chain_cancel_refresh)) }
-        else Button(onClick = model::saveChainEditor, enabled = enabled && when (draft.mode) {
+        else {
+        OutlinedButton(onClick = model::previewChainEditor, enabled = enabled && when (draft.mode) {
+            "group" -> draft.name.isNotBlank(); "source" -> draft.url.isNotBlank(); else -> draft.contents.isNotBlank()
+        }, modifier = Modifier.testTag("chain-check"), shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.check_preview)) }
+        Button(onClick = model::saveChainEditor, enabled = enabled && when (draft.mode) {
             "group" -> draft.name.isNotBlank(); "source" -> draft.url.isNotBlank(); else -> draft.contents.isNotBlank()
         }, modifier = Modifier.testTag("chain-save"), shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.save)) }
+        }
     }) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (state.chainBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -208,20 +225,27 @@ private fun ChainEditor(draft: ChainDraft, state: AppState, model: JeemiViewMode
 
 @Composable
 internal fun ChainAssociation(subscription: Subscription, state: AppState, model: JeemiViewModel, dismiss: () -> Unit) {
+    val expected = remember(subscription.id) { subscription }
+    var query by rememberSaveable(subscription.id) { mutableStateOf("") }
     var selected by rememberSaveable(subscription.id) { mutableStateOf(subscription.chainGroupIds) }
     val revision = rememberSaveable(subscription.id) { subscription.chainRevision }
     val libraryRevision = rememberSaveable(subscription.id) { state.chains.revision }
     EditorDialog(stringResource(R.string.chain_associate), state.busy, dismiss, help = ChainHelp, footer = {
+        OutlinedButton(onClick = { model.previewChainAssociation(expected, selected, libraryRevision) }, enabled = !state.busy,
+            shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.check_preview)) }
         Button(onClick = { model.associateChains(subscription.id, selected, revision, libraryRevision, dismiss) }, enabled = !state.busy,
             modifier = Modifier.testTag("chain-associate-save"), shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.save)) }
     }) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             item {
                 Text(subscription.name, style = MaterialTheme.typography.titleSmall)
+                OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text(stringResource(R.string.search_resources)) }, leadingIcon = { Icon(Icons.Outlined.Search, null) })
+                Text(stringResource(R.string.chain_linked_count, selected.size), style = MaterialTheme.typography.labelSmall)
                 TextButton(onClick = { selected = emptyList() }, enabled = !state.busy, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.chain_unlink_all)) }
             }
             if (state.chains.groups.isEmpty()) item { EmptyCard(stringResource(R.string.chain_empty), ChainHelp) }
-            items(state.chains.groups, key = { it.id }) { group ->
+            items(state.chains.groups.filter { it.name.contains(query, true) }, key = { it.id }) { group ->
                 Row(Modifier.fillMaxWidth().clickable(enabled = !state.busy, role = Role.Checkbox) {
                     selected = if (group.id in selected) selected - group.id else selected + group.id
                 }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {

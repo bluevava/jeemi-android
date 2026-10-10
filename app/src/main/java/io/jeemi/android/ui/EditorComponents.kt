@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package io.jeemi.android.ui
 
 import androidx.compose.foundation.layout.*
@@ -26,7 +26,7 @@ internal val ConfigHelp = HelpContent(R.string.configuration, R.string.config_pu
 internal val ModeHelp = HelpContent(R.string.proxy_mode, R.string.mode_purpose, R.string.mode_scenarios, R.string.mode_cautions)
 
 internal val AppTheme.label: Int get() = when (this) {
-    AppTheme.SYSTEM -> R.string.follow_system
+    AppTheme.SYSTEM -> R.string.system_theme
     AppTheme.LIGHT -> R.string.light_theme
     AppTheme.DARK -> R.string.dark_theme
 }
@@ -64,10 +64,10 @@ internal fun EditorDialog(title: String, busy: Boolean, dismiss: () -> Unit,
                     navigationIcon = { IconButton(onClick = dismiss, enabled = !busy) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.back)) } },
                     actions = { help?.let { FeatureHelp(it) }; action?.invoke() }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background))
                 Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp), content = content)
-                footer?.let { HorizontalDivider(); Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                footer?.let { HorizontalDivider(); FlowRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(onClick = dismiss, enabled = !busy, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.cancel)) }
-                    Spacer(Modifier.width(12.dp)); it()
+                    it()
                 } }
             }
         }
@@ -93,10 +93,22 @@ internal fun CollapsibleCard(title: String, help: HelpContent, initiallyOpen: Bo
 }
 
 @Composable
+internal fun FixedChoiceField(label: String, value: String, options: List<Pair<String, String>>, enabled: Boolean = true,
+    select: (String) -> Unit) {
+    // Dynamic resource names must call ChoiceField, even when today's list is small.
+    // Keep long translated labels, large catalogs and unknown legacy values readable in a menu.
+    val compact = options.size in 1..4 && options.any { it.first == value } && options.all { option ->
+        option.second.codePoints().toArray().sumOf { if (it <= 0x7f) 1 else 2 } <= 20
+    }
+    if (compact) SegmentedChoice(label, value, options, enabled = enabled, select = select)
+    else ChoiceField(label, value, options, enabled, select)
+}
+
+@Composable
 internal fun ChoiceField(label: String, value: String, options: List<Pair<String, String>>, enabled: Boolean = true, select: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Column {
-        OutlinedButton(onClick = { open = true }, enabled = enabled, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium) {
+        OutlinedButton(onClick = { open = true }, enabled = enabled, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
                 Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(options.firstOrNull { it.first == value }?.second ?: value, style = MaterialTheme.typography.bodyLarge)
@@ -113,7 +125,7 @@ internal fun ChoiceField(label: String, value: String, options: List<Pair<String
 internal fun SwitchRow(label: String, checked: Boolean, enabled: Boolean = true, change: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Switch(checked, change, enabled = enabled)
+        JeemiSwitch(checked, change, enabled = enabled)
     }
 }
 

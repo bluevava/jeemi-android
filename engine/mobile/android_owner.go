@@ -67,5 +67,5 @@ func ownerServer(owner ConnectionOwner) (*http.Server, string, string, error) {
 
 // StartCoreWithOwner installs the Android package resolver for this child only.
 func StartCoreWithOwner(executable, home string, descriptor int, owner ConnectionOwner) (*CoreProcess, error) {
-	return startCore(executable, home, descriptor, owner)
+	return startCore(executable, home, descriptor, owner, nil)
 }

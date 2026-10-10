@@ -154,7 +154,7 @@ def verify_apk(path, abi):
             raise RuntimeError("Bundled mihomo differs from the locked core.")
         if json.loads(archive.read("assets/mihomo.json")) != core_spec:
             raise RuntimeError("APK core provenance differs from the lock.")
-        if core_spec.get("variant") == "jeemi-vpn-fd":
+        if core_spec.get("variant") in {"jeemi-vpn-fd", "jeemi-vpn-fd-android-owner"}:
             for field, name in (("sourceLock", "mihomo-source.json"), ("patch", "mihomo-vpn-fd-patch.json")):
                 if hashlib.sha256(archive.read("assets/" + name)).hexdigest() != core_spec[field + "Sha256"]:
                     raise RuntimeError("APK is missing its pinned core source or patch notice.")
@@ -232,9 +232,78 @@ FORWARDED_COMMANDS = {
 }
 
 
+def subscription_device_test(adb):
+    """Two VPN retry cases with a host loopback fixture, for the selected emulator."""
+    if not str(adb[-1]).startswith("emulator-"):
+        raise RuntimeError("Subscription network tests require an emulator (host alias 10.0.2.2).")
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    import threading
+    import time
+
+    counts = {}
+    lock = threading.Lock()
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass  # Synthetic fixture only; never log request URLs.
+
+        def do_GET(self):
+            path = self.path.split("?")[0]
+            if path == "/counts":
+                with lock:
+                    body = json.dumps(counts).encode()
+                self.send_response(200)
+            else:
+                with lock:
+                    counts[path] = counts.get(path, 0) + 1
+                kind = path.rsplit("/", 1)[-1]
+                if kind == "redirect":
+                    self.send_response(302)
+                    self.send_header("Location", path.rsplit("/", 1)[0] + "/ok?token=fixture%2Bvalue")
+                    body = b""
+                else:
+                    self.send_response(503 if kind == "fail" else 200)
+                    self.send_header("Profile-Title", "Downloaded title")
+                    self.send_header("Subscription-Userinfo", "upload=10; download=20; total=100")
+                    body = b"proxies: [\n" if kind == "invalid" else b"rules: ['MATCH,DIRECT']\n"
+                if kind == "slow":
+                    self.send_header("Content-Length", "1000")
+                    self.end_headers()
+                    try:
+                        self.wfile.write(b"rules: [")
+                        self.wfile.flush()
+                        time.sleep(10)
+                    except OSError:
+                        pass
+                    return
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            try:
+                self.wfile.write(body)
+            except OSError:
+                pass
+
+    env = environment()
+    env["ANDROID_SERIAL"] = str(adb[-1])
+    setup()
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        run([ROOT / ("gradlew.bat" if WINDOWS else "gradlew"), "connectedDebugAndroidTest",
+             "-Pandroid.testInstrumentationRunnerArguments.class=io.jeemi.android.SubscriptionDirectRetryTest",
+             f"-Pandroid.testInstrumentationRunnerArguments.subscriptionPort={server.server_port}",
+             "--console", "plain"], env=env)
+    finally:
+        server.shutdown()
+        server.server_close()
+        report = ROOT / "temp/subscription-direct/server-counts.json"
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_text(json.dumps(counts, indent=2) + "\n", encoding="utf-8")
+
+
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["repo", "scripts-test", "doctor", "setup", "engine-test", "engine-build", "core-fetch", "core-verify", "core-build", "geo-fetch", "geo-verify", "ui-check", "check", "device-test", "build-debug", "build-release", "devices", "avds", "install", "run", "logcat", "clean", "verify-apk"] + list(FORWARDED_COMMANDS))
+    parser.add_argument("command", choices=["repo", "scripts-test", "doctor", "setup", "engine-test", "engine-build", "core-fetch", "core-verify", "core-build", "geo-fetch", "geo-verify", "ui-check", "check", "device-test", "device-subscription-test", "build-debug", "build-release", "devices", "avds", "install", "run", "logcat", "clean", "verify-apk"] + list(FORWARDED_COMMANDS))
     parser.add_argument("--serial")
     parser.epilog = "Git tasks: python scripts/dev.py repo --help"
     return parser
@@ -288,6 +357,8 @@ def main(argv=None):
         print("Unsigned release APK only. Configure signing before distribution.")
     elif args.command == "verify-apk":
         for abi in SPEC["abis"]: verify_apk(APK_DIR / f"app-{abi}-debug.apk", abi)
+    elif args.command == "device-subscription-test":
+        subscription_device_test(select_device(args.serial))
     elif args.command == "device-test":
         adb = select_device(args.serial)
         env = environment()

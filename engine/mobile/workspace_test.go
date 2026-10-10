@@ -23,7 +23,7 @@ func jsonText(t *testing.T, value any) string {
 func TestAndroidSessionOwnsTunControllerAndGeoWithoutMutatingCandidate(t *testing.T) {
 	source := "mode: rule\nexternal-controller: 0.0.0.0:9090\nsecret: unsafe\ntun: {enable: false, device: source}\n" +
 		"listeners: [{name: extra, type: socks, port: 1234}]\ngeo-auto-update: true\ngeox-url: {mmdb: https://example.invalid/db}\nrules: ['MATCH,DIRECT']\n"
-	text, err := AndroidSessionConfiguration(source, strings.Repeat("s", 64), 19090, false)
+	text, err := AndroidSessionConfiguration(source, strings.Repeat("s", 64), 19090, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}

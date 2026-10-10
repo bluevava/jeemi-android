@@ -43,7 +43,7 @@ def verify():
     notice = ROOT / "resources/notices/mihomo.json"
     if json.loads(notice.read_text(encoding="utf-8")) != spec:
         raise RuntimeError("Packaged source notice does not match the core manifest.")
-    if spec.get("variant") == "jeemi-vpn-fd":
+    if spec.get("variant") in {"jeemi-vpn-fd", "jeemi-vpn-fd-android-owner"}:
         for field in ("sourceLock", "patch"):
             path = RESOURCES / spec[field]
             if digest(path.read_bytes()) != spec[field + "Sha256"]:
@@ -82,7 +82,7 @@ def fetch_one(item):
 
 def fetch():
     spec = json.loads(LOCK.read_text(encoding="utf-8"))
-    if spec.get("variant") == "jeemi-vpn-fd":
+    if spec.get("variant") in {"jeemi-vpn-fd", "jeemi-vpn-fd-android-owner"}:
         import mihomo_build
         mihomo_build.build()
         return

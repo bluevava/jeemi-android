@@ -96,14 +96,28 @@ func prepareRuleSetEntry(input RuleSetEntryInput, state State) (RuleSet, RuleSet
 	}
 	entry := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Style: yaml.SingleQuotedStyle, Value: line}
 	payload := doc.Content[0].Content[1]
-	// yaml.v3 omits a flow sequence's trailing comment when changing it to
-	// block style. Keep that comment above the sequence instead.
-	if payload.Style&yaml.FlowStyle != 0 && payload.LineComment != "" {
+	emptyHeader := implicitEmptyRuleSetPayload(payload)
+	if emptyHeader {
+		payload.Kind, payload.Tag = yaml.SequenceNode, "!!seq"
+	}
+	// Keep comments when converting a flow list or bare header to a block list.
+	if (emptyHeader || payload.Style&yaml.FlowStyle != 0) && payload.LineComment != "" {
 		payload.HeadComment = strings.TrimSpace(payload.HeadComment + "\n" + payload.LineComment)
 		payload.LineComment = ""
 	}
 	payload.Style = 0
-	payload.Content = append(payload.Content, entry)
+	duplicateApp := false
+	if input.MatchType == "processName" {
+		for _, item := range payload.Content {
+			if appRulePackage(item.Value) == input.Value {
+				duplicateApp = true
+				break
+			}
+		}
+	}
+	if !duplicateApp {
+		payload.Content = append(payload.Content, entry)
+	}
 	var output bytes.Buffer
 	encoder := yaml.NewEncoder(&output)
 	encoder.SetIndent(2)

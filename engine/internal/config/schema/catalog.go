@@ -2,7 +2,7 @@ package schema
 
 import "jeemi-android/engine/internal/config/compose"
 
-const Version = "mihomo-2026.09-v1"
+const Version = "mihomo-2026.10-v2"
 
 type ValueKind string
 
@@ -111,6 +111,9 @@ var catalog = Catalog{
 				lockedField("external-controller-tls", "/external-controller-tls", KindScalar),
 				lockedField("external-controller-routing-mark", "/external-controller-routing-mark", KindScalar),
 				lockedField("external-doh-server", "/external-doh-server", KindScalar),
+				lockedField("external-ui", "/external-ui", KindScalar),
+				lockedField("external-ui-name", "/external-ui-name", KindScalar),
+				lockedField("external-ui-url", "/external-ui-url", KindScalar),
 			},
 		},
 		{
@@ -218,6 +221,9 @@ var catalog = Catalog{
 			ID:               "routing",
 			DocumentationURL: docsBase + "/rules/",
 			Fields: []Field{
+				lockedField("rules", "/rules", KindRules),
+				lockedField("proxy-groups", "/proxy-groups", KindNamedSequence),
+				lockedField("rule-providers", "/rule-providers", KindNamedMapping),
 				namedMappingField("sub-rules", "/sub-rules", "local-sub-rule:\n  - DOMAIN-SUFFIX,example.com,DIRECT"),
 			},
 		},

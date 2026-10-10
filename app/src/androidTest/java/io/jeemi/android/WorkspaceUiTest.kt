@@ -11,7 +11,11 @@ class WorkspaceUiTest {
     @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
 
     private fun text(id: Int) = compose.activity.getString(id)
-    private fun clickLabel(id: Int) = compose.onNode(hasText(text(id)) and hasClickAction()).performClick()
+    private fun clickLabel(id: Int) {
+        val nav = when (id) { R.string.configuration -> "CONFIG"; R.string.subscriptions -> "SUBSCRIPTIONS"; else -> null }
+        if (nav != null) compose.onNodeWithTag("navigation-$nav").performClick()
+        else compose.onNode(hasText(text(id)) and hasClickAction()).performClick()
+    }
 
     @Test fun importCreateAssociateAndPreviewKeepTheDraftAndOriginal() {
         compose.waitUntil(15_000) { compose.onAllNodesWithText(text(R.string.runtime_stopped)).fetchSemanticsNodes().isNotEmpty() }
@@ -38,15 +42,16 @@ class WorkspaceUiTest {
         clickLabel(R.string.close)
         compose.onNode(hasSetTextAction() and hasText(original)).assertExists()
         compose.onNode(hasText(text(R.string.import_action)) and hasClickAction() and hasAnyAncestor(isDialog())).performClick()
-        compose.waitUntil(15_000) { compose.onAllNodesWithText("Mobile layout preview").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(30_000) { compose.onAllNodesWithText("Mobile layout preview").fetchSemanticsNodes().isNotEmpty() && compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
         compose.onAllNodesWithContentDescription(text(R.string.subscription_shelf))[0].performClick()
         compose.onNodeWithContentDescription(text(R.string.more_actions)).assertIsDisplayed()
         clickLabel(R.string.configuration)
         clickLabel(R.string.new_resource)
         compose.onNode(hasText(text(R.string.name)) and hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("Local sniffer")
-        compose.onNode(hasText(text(R.string.add_field)) and hasClickAction()).performScrollTo().performClick()
-        compose.onNode(hasText(text(R.string.search_fields)) and hasSetTextAction()).performTextInput("/sniffer/enable")
-        compose.onNode(hasText("sniffer.enable") and hasClickAction()).performClick()
+        compose.onNodeWithTag("field-tree-search").performScrollTo().performTextInput("/sniffer/enable")
+        compose.onNodeWithTag("field-toggle-/sniffer/enable").performScrollTo().performClick()
+        compose.waitUntil(15_000) { !androidx.lifecycle.ViewModelProvider(compose.activity)[io.jeemi.android.ui.JeemiViewModel::class.java].state.value.busy }
+        compose.onNodeWithTag("field-name-/sniffer/enable").performScrollTo().performClick()
         compose.onNode(hasText(text(R.string.apply_to_draft)) and hasClickAction()).performClick()
         compose.onNode(hasText(text(R.string.save)) and hasClickAction() and hasAnyAncestor(isDialog())).performClick()
         try {

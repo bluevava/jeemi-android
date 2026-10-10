@@ -18,6 +18,10 @@ import io.jeemi.android.ui.theme.JeemiTheme
 import io.jeemi.android.ui.theme.isJeemiDark
 
 class MainActivity : AppCompatActivity() {
+    override fun onResume() {
+        super.onResume()
+        (application as JeemiApplication).runtime.reconcile()
+    }
     // Locale/layoutDirection are delivered to Compose through LocalConfiguration.
     // Keep the active editor and input session when switching the application language.
     override fun onCreate(savedInstanceState: Bundle?) {

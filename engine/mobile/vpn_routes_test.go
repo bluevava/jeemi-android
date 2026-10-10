@@ -7,6 +7,34 @@ import (
 	"testing"
 )
 
+func TestVpnAddressMatchesMihomoFakeIPDerivedListener(t *testing.T) {
+	for _, test := range []struct{ source, want string }{
+		{"rules: ['MATCH,DIRECT']", "198.18.0.1/30"},
+		{"dns: {fake-ip-range: ''}", "198.18.0.1/30"},
+		{"dns: {enable: false, enhanced-mode: redir-host, fake-ip-range: 198.19.1.5/24}", "198.19.1.5/30"},
+		{"dns: {enhanced-mode: fake-ip, fake-ip-range: 198.18.0.1/16}", "198.18.0.1/30"},
+	} {
+		for _, legacy := range []bool{false, true} {
+			raw, err := AndroidVpnRoutes(test.source, true, legacy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var plan vpnRoutePlan
+			if err := json.Unmarshal([]byte(raw), &plan); err != nil {
+				t.Fatal(err)
+			}
+			if plan.Address != test.want || !routeCovers(plan, "172.19.0.2") {
+				t.Fatal("listener or DNS mismatch")
+			}
+		}
+	}
+	for _, value := range []string{"0.0.0.0/0", "127.0.0.1/8", "224.0.0.1/8", "'::1/128'", "not-an-address", "{}", "null"} {
+		if _, err := AndroidVpnRoutes("dns: {fake-ip-range: "+value+"}", false, false); err == nil {
+			t.Fatal("invalid VPN address accepted")
+		}
+	}
+}
+
 func routeCovers(plan vpnRoutePlan, address string) bool {
 	addr := netip.MustParseAddr(address)
 	best, included := -1, false

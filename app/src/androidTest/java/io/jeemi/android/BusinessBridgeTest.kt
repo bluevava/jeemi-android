@@ -57,10 +57,10 @@ class BusinessBridgeTest {
         val context = ApplicationProvider.getApplicationContext<JeemiApplication>()
         val core = BundledCore(context)
         assertTrue(core.executable.canonicalPath.startsWith(context.applicationInfo.nativeLibraryDir))
-        assertTrue(core.version().contains("v1.19.30"))
+        assertTrue(core.version().contains("v1.19.32-jeemi.3"))
     }
 
-    @Test fun retiredStackPreferencesKeepOldLibrariesReadableWithoutChangingSubscriptions() {
+    @Test fun stackPreferencesRoundTripAndDefaultToMipsWithoutChangingSubscriptions() {
         val context = ApplicationProvider.getApplicationContext<JeemiApplication>()
         val directory = File(context.cacheDir, "fixed-stack-${UUID.randomUUID()}").apply { mkdirs() }
         try {
@@ -73,20 +73,20 @@ class BusinessBridgeTest {
             val file = File(directory, "library-v1.json")
             val saved = file.readText()
             val expected = engine.project(item, library.preferences, emptyList())
-            assertTrue(expected.yaml.contains("stack: gvisor"))
-            for (schema in 1..5) for (stack in listOf("SYSTEM", "MIXED", "GVISOR", "UNKNOWN")) {
+            assertTrue(expected.yaml.contains("stack: mips"))
+            for (schema in 1..5) for (stack in listOf("SYSTEM", "MIXED", "GVISOR", "MIPS", "gVisor", "UNKNOWN", "")) {
                 val legacy = JSONObject(saved).put("schemaVersion", schema)
                 legacy.getJSONObject("preferences").put("tunStack", stack)
                 val legacyText = legacy.toString()
                 file.writeText(legacyText)
                 val restored = repository.load()
-                assertEquals(library, restored)
+                assertEquals(library.copy(preferences = library.preferences.copy(tunStack = TunStack.restored(stack))), restored)
                 assertEquals(legacyText, file.readText())
                 assertEquals(original, restored.selected!!.original)
                 val candidate = engine.project(restored.selected!!, restored.preferences, restored.resources)
-                assertEquals(expected.revision, candidate.revision)
+                assertTrue(candidate.yaml.contains("stack: " + TunStack.restored(stack).configValue))
                 repository.save(restored)
-                assertFalse(JSONObject(file.readText()).getJSONObject("preferences").has("tunStack"))
+                assertEquals(TunStack.restored(stack).name, JSONObject(file.readText()).getJSONObject("preferences").getString("tunStack"))
                 assertEquals(original, repository.load().selected!!.original)
             }
         } finally { directory.deleteRecursively() }

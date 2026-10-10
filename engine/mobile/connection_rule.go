@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"jeemi-android/engine/internal/config/resources"
 	"regexp"
-	"strings"
 )
-
-var androidPackageName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$`)
 
 // PrepareConnectionRule returns a reviewable resource and a literal preview.
 // Android commits it atomically with the affected subscription candidates.
@@ -22,8 +19,7 @@ func PrepareConnectionRule(library, request, newID string) (string, error) {
 		return "", fmt.Errorf("invalid_rule_entry")
 	}
 	if input.MatchType == "processName" {
-		input.Value = strings.TrimSpace(input.Value)
-		if !androidPackageName.MatchString(input.Value) {
+		if !resources.IsAndroidPackageName(input.Value) {
 			return "", fmt.Errorf("invalid_rule_entry")
 		}
 	}

@@ -36,10 +36,14 @@ class ChainProxyPageTest {
     private var server: ChainSourceServer? = null
     private fun label(id: Int) = compose.activity.getString(id)
     private fun ready() { compose.waitUntil(15000) { model.state.value.loaded } }
-    private fun navigate(id: Int) { compose.onNode(hasText(label(id)) and hasClickAction()).performClick() }
+    private fun navigate(id: Int) {
+        val nav = when (id) { R.string.configuration -> "CONFIG"; R.string.subscriptions -> "SUBSCRIPTIONS"; else -> null }
+        if (nav != null) compose.onNodeWithTag("navigation-$nav").performClick()
+        else compose.onNode(hasText(label(id)) and hasClickAction()).performClick()
+    }
     private fun chainPage() {
         navigate(R.string.configuration)
-        compose.onNode(hasText(label(R.string.chain_proxies)) and hasClickAction()).performScrollTo().performClick()
+        compose.onNode(hasText(label(R.string.chain_proxies)) and hasClickAction()).performClick()
     }
     private fun language(tag: String) {
         compose.runOnIdle { AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag)) }
@@ -139,6 +143,22 @@ class ChainProxyPageTest {
             assertEquals("association failed for ${profile.name}: ${model.state.value.businessIssue?.code}",
                 listOf(groupId), model.state.value.library.subscriptions.first { it.id == profile.id }.chainGroupIds)
         }
+        // URL preview uses downloaded nodes in a detached library, validates both
+        // subscriptions and leaves the editor, source nodes and revision intact.
+        val beforePreview = app.repository.load()
+        val sourceToPreview = model.state.value.chains.groups.single().sources[1]
+        local.bodyB = CHAIN_LANDING.replace("Landing", "Preview landing")
+        compose.runOnIdle { model.openChainItem(model.state.value.chains.groups.single(), source = true, id = sourceToPreview.id) }
+        compose.waitUntil(10000) { model.chainDraft.value?.mode == "source" }
+        compose.runOnIdle { model.previewChainEditor() }
+        compose.waitUntil(25000) { !model.state.value.chainBusy && (model.state.value.resourceCheck != null || model.state.value.error != null) }
+        assertNull(model.state.value.error)
+        assertEquals(2, model.state.value.resourceCheck!!.candidates.size)
+        assertTrue(model.state.value.resourceCheck!!.candidates.all { it.passed })
+        assertTrue(model.state.value.resourceCheck!!.library.chainLibrary.contains("Preview landing"))
+        assertEquals(beforePreview, app.repository.load())
+        assertNotNull(model.chainDraft.value)
+        compose.runOnIdle { model.dismissResourceCheck(); model.closeChainEditor() }
         val old = JSONObject(app.repository.load().chainLibrary).getJSONArray("groups").getJSONObject(0).getJSONArray("sources")
         local.failure = "a"; local.bodyB = CHAIN_LANDING.replace("Landing", "Landing 2")
         compose.runOnIdle { model.refreshChains(groupId) }

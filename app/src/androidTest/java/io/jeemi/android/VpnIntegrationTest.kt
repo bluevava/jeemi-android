@@ -6,6 +6,7 @@ import android.net.VpnService
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.platform.app.InstrumentationRegistry
+import io.jeemi.android.domain.TunStack
 import io.jeemi.android.domain.Preferences
 import io.jeemi.android.domain.ProxyMode
 import io.jeemi.android.domain.RuntimeState
@@ -37,7 +38,10 @@ class VpnIntegrationTest {
     }
     @Test fun authorizedTunCarriesSeparateUidTcpAndDnsThroughMihomoAndStopsCleanly() = runVpn(ProxyMode.RULE)
     @Test fun globalModeExposesAndUsesTheCoreGlobalSelector() = runVpn(ProxyMode.GLOBAL)
-    private fun runVpn(mode: ProxyMode) {
+    @Test fun systemStackCarriesSeparateUidTcpAndDns() = runVpn(ProxyMode.RULE, TunStack.SYSTEM)
+    @Test fun gvisorStackCarriesSeparateUidTcpAndDns() = runVpn(ProxyMode.RULE, TunStack.GVISOR)
+    @Test fun mixedStackCarriesSeparateUidTcpAndDns() = runVpn(ProxyMode.RULE, TunStack.MIXED)
+    private fun runVpn(mode: ProxyMode, stack: TunStack = TunStack.MIPS) {
         lateinit var activity: MainActivity
         activityRule.scenario.onActivity { activity = it }
         val app = activity.application as JeemiApplication
@@ -98,12 +102,14 @@ class VpnIntegrationTest {
                 "proxies:\n  - {name: Loopback test proxy, type: http, server: 127.0.0.1, port: " + proxy.localPort + "}\n" +
                 "proxy-groups:\n  - {name: Probe, type: select, proxies: [DIRECT, Loopback test proxy]}\nrules: ['PROCESS-NAME," + testPackage + ",Probe', 'MATCH,Probe']"
             val profile = app.engine.normalize("Isolated VPN test", source)
-            val preferences = Preferences(mode = mode, runtimeJson = JSONObject(Mobile.runtimeDefaults()).put("lanBypassRules", JSONArray()).put("findProcessMode", "always").toString())
+            val preferences = Preferences(mode = mode, tunStack = stack, runtimeJson = JSONObject(Mobile.runtimeDefaults())
+                .put("lanBypassRules", JSONArray()).put("findProcessMode", "always")
+                .put("dnsFakeIpRange", if (stack == TunStack.MIXED) "198.19.1.1/24" else "198.18.0.1/16").toString())
             val candidate = app.engine.project(profile, preferences, emptyList())
             val selector = if (mode == ProxyMode.GLOBAL) "GLOBAL" else "Probe"
             assertTrue(candidate.structure.groups.any { it.name == selector })
             val startRequest = VpnRequest(profile.id, candidate.yaml, true,
-                revision = candidate.revision,
+                revision = candidate.revision, tunStack = stack,
                 selections = mapOf("Probe" to "Loopback test proxy", selector to "Loopback test proxy"))
             activityRule.scenario.onActivity { app.runtime.start(startRequest) }
             eventually(35_000) { app.runtime.state.value is RuntimeState.Running || app.runtime.state.value is RuntimeState.Failed }
@@ -130,7 +136,7 @@ class VpnIntegrationTest {
             eventually(35_000) { app.runtime.state.value is RuntimeState.Running || app.runtime.state.value is RuntimeState.Failed }
             assertTrue("Real TUN restart failed: " + app.runtime.state.value, app.runtime.state.value is RuntimeState.Running)
             val live = requireNotNull(app.runtime.live.value)
-            assertEquals("gVisor", requireNotNull(app.runtime.api).call("/configs").getJSONObject("tun").getString("stack"))
+            assertEquals(stack.configValue, requireNotNull(app.runtime.api).call("/configs").getJSONObject("tun").getString("stack").lowercase())
             assertEquals(candidate.revision, live.revision)
             assertNotEquals(first.sessionId, live.sessionId)
             assertNotSame(oldApi, app.runtime.api)

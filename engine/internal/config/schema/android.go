@@ -2,8 +2,8 @@ package schema
 
 import "strings"
 
-// These desktop endpoints are owned by VpnService. Never offer a local field
-// that the Android session would silently ignore or use for a second TUN.
+// Android owns these endpoints. The field tree may explicitly reveal their
+// structure as locked, but local configuration must never edit them.
 func init() {
 	for i := range catalog.Categories {
 		for j := range catalog.Categories[i].Fields {

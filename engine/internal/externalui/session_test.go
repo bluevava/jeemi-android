@@ -19,7 +19,7 @@ func TestAndroidSessionsReuseInstalledDashboardWithoutNetworkOrWriteback(t *test
 			t.Fatal(err)
 		}
 		name := filepath.Join(session, filepath.FromSlash(RuntimePath(version)), "index.html")
-		if content, err := os.ReadFile(name); err != nil || string(content) != "fixture" {
+		if content, err := os.ReadFile(name); err != nil || string(content) != "<html>fixture</html>" {
 			t.Fatal("session has no valid UI", err)
 		}
 		if err := os.WriteFile(name, []byte("session modification"), 0600); err != nil {

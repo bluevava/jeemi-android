@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="binding_script">Script</string>
+    <string name="binding_config">Config</string>
+    <string name="binding_chain">Chain</string>
+    <string name="bind">Bind</string>
+    <string name="unbind">Unbind</string>
+    <string name="unbound">Unbound</string>
+    <string name="bind_resource">Bind %1$s to %2$s</string>
+    <string name="unbind_resource">Unbind %1$s from %2$s</string>
+    <string name="change_binding">Change the %1$s binding for %2$s</string>
+    <string name="current_binding">Current binding: %1$s</string>
+    <string name="resource_missing">Missing resource</string>
+    <string name="search_resources">Search names</string>
+    <string name="resource_relationships">Relationships</string>
+    <string name="relationship_count">Relationships · subscriptions: %1$d</string>
+    <string name="referenced_by">Used by</string>
+    <string name="references_to">References</string>
+    <string name="affected_subscriptions">Affected subscriptions</string>
+    <string name="local_handler">Local processing</string>
+    <string name="check_preview">Check &amp; preview</string>
+    <string name="resource_structure_valid">Resources and references passed</string>
+    <string name="candidates_checked">Core checks passed: %1$d / %2$d</string>
+    <string name="no_candidate_checked">No associated subscription; no candidate checked</string>
+    <string name="candidate_check_passed">Composition and core check passed</string>
+    <string name="candidate_check_failed">Candidate check failed. Review resource contents and references.</string>
+    <string name="associated_only">All associated subscriptions</string>
+    <string name="script_text_source">Local source</string>
+    <string name="script_url_source">URL source · cached code</string>
+    <string name="config_resource_facts">Enabled fields: %1$d · groups: %2$d</string>
+    <string name="rule_reference_count">Rule set references: %1$d</string>
+    <string name="selector_parameters">Selector settings</string>
+    <string name="node_filtering">Node filtering</string>
+    <string name="rule_source_options">Source and format</string>
+    <string name="help_relationships_purpose">Inspect stable-ID relationships between subscriptions, local scripts or configurations, strategy groups, rule sets and chain groups.</string>
+    <string name="help_relationships_scenarios">Open relationships from a resource card or editor to inspect its users, dependencies and affected subscriptions. Tap an entry to follow a link. Disabled references remain marked and indirect references count toward associations.</string>
+    <string name="help_relationships_cautions">Scripts and configurations are mutually exclusive. Configurations order strategy groups, which reference rule sets; chain bindings are independent. Disabling routing or a group retains references. A rule set has one owning group. Text in scripts or notes does not create links. Repair missing references; running sessions require a restart.</string>
+    <string name="help_resource_check_purpose">Check the draft structure, the complete resource graph and composed candidates for every associated subscription, then run static checks with the bundled mihomo core.</string>
+    <string name="help_resource_check_scenarios">Review affected subscriptions and their results before saving; open YAML for passing candidates. A script or configuration can also be tested with an additional subscription. Groups and rule sets use their existing configuration links. Chain node and source drafts can also be checked.</string>
+    <string name="help_resource_check_cautions">Preview does not save resources or bindings or start VPN. Without an associated subscription, only resources and references are checked. Previewing a new URL explicitly downloads it without committing. Saving checks again and retains old data and drafts on failure. Static checks do not prove connectivity. YAML may contain credentials; review before exporting.</string>
+</resources>

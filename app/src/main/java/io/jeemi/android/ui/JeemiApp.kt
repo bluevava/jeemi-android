@@ -21,6 +21,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -125,7 +126,8 @@ fun JeemiApp(state: AppState, model: JeemiViewModel) {
         bottomBar = {
             if (!settingsOpen) NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                 Destination.entries.forEach { item ->
-                    NavigationBarItem(selected = destination == item, onClick = { if (item == Destination.MORE) moreOpen = true else destination = item },
+                    NavigationBarItem(modifier = Modifier.testTag("navigation-${item.name}"), selected = destination == item,
+                        onClick = { if (item == Destination.MORE) moreOpen = true else destination = item },
                         icon = { Icon(item.icon, null) },
                         label = { Text(stringResource(item.label), maxLines = 1, softWrap = false, textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis) })
                 }
@@ -172,6 +174,7 @@ fun JeemiApp(state: AppState, model: JeemiViewModel) {
     val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri != null) model.export(uri)
     }
+    state.resourceCheck?.let { ResourceCheckDialog(it, state.busy, model) }
     state.preview?.let { yaml ->
         EditorDialog(stringResource(state.previewTitle), state.busy, model::dismissPreview, action = {
             TextButton(onClick = { model.prepareExport(); exportPicker.launch(if (state.previewTitle == R.string.resource_package) "jeemi-package.json" else "jeemi-document.yaml") }, enabled = !state.busy, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.export)) }

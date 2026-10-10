@@ -7,7 +7,7 @@
     <string name="chain_busy">A subscription request is already in progress.</string>
     <string name="chain_cancel_refresh">Cancel refresh</string>
     <string name="chain_cancelled">Refresh cancelled. Completed sources remain updated; other sources retain their previous nodes.</string>
-    <string name="chain_candidate_invalid">The candidate failed validation for an associated subscription. Previous nodes were retained.</string>
+    <string name="chain_candidate_invalid">The candidate did not pass the bundled core check.</string>
     <string name="chain_core_version_required">The selected core version does not support a landing node’s required features. Update the core.</string>
     <string name="chain_delete_note">Deleting regenerates affected subscription candidates. Unlink referenced groups before deleting them.</string>
     <string name="chain_diag_generated">%1$s: %2$d chain nodes generated</string>
@@ -112,7 +112,7 @@
     <string name="help_chain_nodes_scenarios">Maintain landing protocol, authentication, TLS and transport fields manually. URI parameters share the subscription parser; arrays and objects use encoded JSON.</string>
     <string name="help_chain_purpose">Manage landing nodes B and associate groups with subscriptions. Match intermediaries A in final selectors and append copies for Device → A → B → target.</string>
     <string name="help_chain_scenarios">Paste self-hosted exits into manual groups or manage URLs in subscription groups. Groups can be shared across subscriptions independently of local configuration or script associations.</string>
-    <string name="help_chain_source_cautions">Only adding, editing or manual refresh accesses the network. Lists hide full URLs; reveal them explicitly in the editor. Leaving or backgrounding cancels requests. Sources commit independently; failures keep old nodes and cancellation keeps completed updates. Size, redirect and time limits apply. Reopen stale editors instead of overwriting newer revisions.</string>
+    <string name="help_chain_source_cautions">Only adding, editing or manual refresh accesses the network. Lists hide full URLs; reveal them explicitly in the editor. Leaving or backgrounding cancels requests. Sources commit independently; failures keep old nodes and cancellation keeps completed updates. Size, redirect and time limits apply. Reopen stale editors instead of overwriting newer revisions. A failed download retries once directly while Jeemi VPN is still running. Cancellation or configuration validation failures do not trigger retries.</string>
     <string name="help_chain_source_purpose">Fetch landing nodes from HTTP/HTTPS sources with independent name filters. Keep each source’s last successful nodes, timestamp and conversion report.</string>
     <string name="help_chain_source_scenarios">Keep multiple URLs in a group and refresh one source, one group or all sources. A valid source may be saved even when its filter currently matches no nodes.</string>
     <string name="help_conversion_cautions">The source is unchanged and source routing is omitted. Unrecognized or malformed URI nodes are skipped with reasons. No usable nodes, invalid shared DNS/certificate metadata or failed final validation preserve the previous subscription. Parsing does not verify connectivity; Home DNS overrides still apply as configured.</string>

@@ -3,6 +3,7 @@ package mobile
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"jeemi-android/engine/internal/config/document"
 	"net/http"
 	"os"
@@ -22,6 +23,7 @@ type CoreProcess struct {
 	stopOnce     sync.Once
 	tunnelStatus *tunnelStatus
 	ownerServer  *http.Server
+	socketServer io.Closer
 }
 
 type coreChild interface {
@@ -69,9 +71,9 @@ func (p *CoreProcess) TunnelError() string {
 // StartCore takes ownership of a dup of the VPN FD, passing it as child FD 3.
 // The executable must be the PackageManager-installed ABI resource.
 func StartCore(executable, home string, descriptor int) (*CoreProcess, error) {
-	return startCore(executable, home, descriptor, nil)
+	return startCore(executable, home, descriptor, nil, nil)
 }
-func startCore(executable, home string, descriptor int, owner ConnectionOwner) (*CoreProcess, error) {
+func startCore(executable, home string, descriptor int, owner ConnectionOwner, protector SocketProtector) (*CoreProcess, error) {
 	if descriptor < 0 {
 		return nil, fmt.Errorf("invalid_vpn_descriptor")
 	}
@@ -86,10 +88,22 @@ func startCore(executable, home string, descriptor int, owner ConnectionOwner) (
 	status := &tunnelStatus{}
 	environment := []string{"PATH=/system/bin", "HOME=" + home}
 	result := &CoreProcess{done: make(chan struct{}), tunnelStatus: status}
+	if protector != nil {
+		server, address, token, err := protectionServer(protector)
+		if err != nil {
+			tun.Close()
+			return nil, fmt.Errorf("socket_protection_failed")
+		}
+		result.socketServer = server
+		environment = append(environment, "JEEMI_ANDROID_PROTECT="+address, "JEEMI_ANDROID_PROTECT_TOKEN="+token)
+	}
 	if owner != nil {
 		server, address, token, err := ownerServer(owner)
 		if err != nil {
 			tun.Close()
+			if result.socketServer != nil {
+				_ = result.socketServer.Close()
+			}
 			return nil, fmt.Errorf("owner_bridge_failed")
 		}
 		result.ownerServer = server
@@ -97,7 +111,11 @@ func startCore(executable, home string, descriptor int, owner ConnectionOwner) (
 	}
 	started := make(chan error, 1)
 	go func() {
+		defer close(result.done)
 		defer func() {
+			if result.socketServer != nil {
+				_ = result.socketServer.Close()
+			}
 			if result.ownerServer != nil {
 				_ = result.ownerServer.Close()
 			}
@@ -110,7 +128,6 @@ func startCore(executable, home string, descriptor int, owner ConnectionOwner) (
 		tun.Close()
 		if err != nil {
 			result.stopped.Store(true)
-			close(result.done)
 			started <- fmt.Errorf("core_exec_failed")
 			return
 		}
@@ -118,9 +135,9 @@ func startCore(executable, home string, descriptor int, owner ConnectionOwner) (
 		started <- nil
 		_ = child.Wait()
 		result.stopped.Store(true)
-		close(result.done)
 	}()
 	if err := <-started; err != nil {
+		<-result.done
 		return nil, err
 	}
 	return result, nil
@@ -129,6 +146,7 @@ func (p *CoreProcess) IsRunning() bool { return !p.stopped.Load() }
 func (p *CoreProcess) Stop() {
 	p.stopOnce.Do(func() {
 		if p.stopped.Load() {
+			<-p.done
 			return
 		}
 		_ = p.process.Signal(os.Interrupt)
@@ -144,7 +162,11 @@ func (p *CoreProcess) Stop() {
 
 // Android owns the TUN and authenticated local controller. Source values
 // cannot create extra desktop listeners, select interfaces or schedule GEO.
-func AndroidSessionConfiguration(candidate, secret string, port int, ipv6 bool) (string, error) {
+func AndroidSessionConfiguration(candidate, secret string, port int, ipv6 bool, selectedStack string) (string, error) {
+	stack, err := androidStack(selectedStack)
+	if err != nil {
+		return "", err
+	}
 	if len(candidate) > maxBytes || len(secret) < 32 || port < 1024 || port > 65535 {
 		return "", fmt.Errorf("invalid_session")
 	}
@@ -164,7 +186,7 @@ func AndroidSessionConfiguration(candidate, secret string, port int, ipv6 bool) 
 			return "", err
 		}
 	}
-	tun := map[string]any{"enable": true, "file-descriptor": 3, "stack": androidTUNStack, "auto-route": false,
+	tun := map[string]any{"enable": true, "file-descriptor": 3, "stack": stack, "auto-route": false,
 		"auto-detect-interface": false, "auto-redirect": false, "mtu": 1500, "dns-hijack": []string{"any:53", "tcp://any:53"}}
 	if len(exclusions) > 0 {
 		tun["route-exclude-address"] = exclusions

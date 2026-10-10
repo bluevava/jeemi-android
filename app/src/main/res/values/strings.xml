@@ -48,6 +48,7 @@
     <string name="select_subscription_first">Select a subscription first.</string>
     <string name="appearance">Appearance</string>
     <string name="follow_system">Follow system</string>
+    <string name="system_theme">System</string>
     <string name="light_theme">Light</string>
     <string name="dark_theme">Dark</string>
     <string name="operation_failed">Operation failed</string>
@@ -56,7 +57,7 @@
     <string name="preview_error">Configuration could not be composed. Check the selected subscription and enabled local settings.</string>
     <string name="import_purpose">Keep the original subscription and produce a normalized mihomo document plus an offline node list.</string>
     <string name="import_scenarios">Use a URL or pasted text to import native YAML, supported Surge profiles or node URI lists, including supported Base64 subscriptions.</string>
-    <string name="import_cautions">Imports are limited to 4 MiB. Documents may contain credentials and remain in app-private storage. Unsupported formats are rejected; partial conversions report skipped nodes. Closing help preserves your draft. An empty name uses Profile-Title (including Base64) or the name in Subscription-Userinfo, then numbered unnamed subscriptions. Conversion runs before the associated script or local configuration.</string>
+    <string name="import_cautions">Imports are limited to 4 MiB. Documents may contain credentials and remain in app-private storage. Unsupported formats are rejected; partial conversions report skipped nodes. Closing help preserves your draft. An empty name uses Profile-Title (including Base64) or the name in Subscription-Userinfo, then numbered unnamed subscriptions. Conversion runs before the associated script or local configuration. If a URL download fails while Jeemi VPN is still running, retry once directly over an underlying network. Cancellation, size limits and configuration validation failures do not trigger retries. Failed attempts keep the saved subscription.</string>
     <string name="mode_purpose">Choose the final runtime mode: rule, global or direct.</string>
     <string name="mode_scenarios">Rule follows configured rules. Global uses the global policy. Direct bypasses proxy policies.</string>
     <string name="mode_cautions">Home always injects this choice after subscription and local processing. Restart VPN to use a changed mode.</string>
@@ -86,7 +87,7 @@
     <string name="compact_nodes">Compact rows</string>
     <string name="show_hidden_groups">Show hidden groups</string>
     <string name="all_nodes">All nodes</string>
-    <string name="groups">Proxy groups</string>
+    <string name="groups">Local groups</string>
     <string name="rule_providers">Rule providers</string>
     <string name="associations">Configuration association</string>
     <string name="no_handler">Use subscription only</string>
@@ -96,8 +97,8 @@
     <string name="offline">Offline view</string>
     <string name="group_members">%1$d members · %2$d providers</string>
     <string name="no_groups">No static groups in this subscription</string>
-    <string name="scripts">Scripts</string>
-    <string name="rule_sets">Rule sets</string>
+    <string name="scripts">Local scripts</string>
+    <string name="rule_sets">Local rule sets</string>
     <string name="new_resource">New resource</string>
     <string name="resource_content">Content</string>
     <string name="composition_strategy">Composition strategy</string>
@@ -108,7 +109,7 @@
     <string name="strategy_merge_by_name">Merge by name</string>
     <string name="strategy_append_before_terminal">Before MATCH</string>
     <string name="add_field">Add a field</string>
-    <string name="search_fields">Search field paths</string>
+    <string name="search_fields">Search fields or descriptions</string>
     <string name="field_value">Field value</string>
     <string name="field_reference">Official reference</string>
     <string name="apply_to_draft">Insert into draft</string>
@@ -118,7 +119,6 @@
     <string name="delete_resource">Delete this resource?</string>
     <string name="delete_resource_note">Handler associations are removed in the same save. Resources still referenced by routing plans or strategy groups cannot be deleted.</string>
     <string name="saved_resources">%1$d saved resources</string>
-    <string name="associated_count">%1$d associations</string>
     <string name="runtime_preferences">Runtime preferences</string>
     <string name="runtime_basics">Basic settings</string>
     <string name="dns_settings">DNS settings</string>
@@ -147,7 +147,7 @@
     <string name="concurrent_tcp">Concurrent TCP</string>
     <string name="unified_delay">Unified delay</string>
     <string name="core_management">Built-in core</string>
-    <string name="core_bundled_version">mihomo v1.19.30-jeemi.2 · built in</string>
+    <string name="core_bundled_version">mihomo v1.19.32-jeemi.3 · built in</string>
     <string name="export_error">Unable to write the selected document. Choose a writable location.</string>
     <string name="resource_error">Check the resource name, YAML or script contract and composition strategy. Your draft has been retained.</string>
     <string name="network_error">The network operation failed. Check the address and current connection.</string>

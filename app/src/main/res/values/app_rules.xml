@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_rule_list">App list</string>
+    <string name="app_rule_apps">Rules</string>
+    <string name="app_rule_not_installed">Not\ninstalled</string>
+    <string name="app_rule_add">Add apps</string>
+    <string name="app_rule_add_selected">Add (%1$d)</string>
+    <string name="app_rule_search">Search app name or package</string>
+    <string name="app_rule_system">Show system apps</string>
+    <string name="app_rule_yaml">Complete rules YAML</string>
+    <string name="app_rule_count">%1$d apps · %2$d other rules</string>
+    <string name="app_rule_invalid">Cannot read app rules. Check the complete rules YAML.</string>
+    <string name="app_rule_load_failed">Could not load apps. Try again later.</string>
+    <string name="app_rule_retry">Retry</string>
+    <string name="app_rules_purpose">App list is a display switch for local classical rule sets. It is on by default and does not change rule behavior. All entries appear in YAML order: package rules show app details; domain, IP, regex and other rules appear as single-line labels.</string>
+    <string name="app_rules_scenarios">With the list enabled, add apps by searching names or packages. Select multiple apps to append them in selection order; optionally show system apps, which are hidden initially. Installed apps show an icon, name and package. Missing packages show “Not installed” in the icon position. Each move shifts an app by one row; delete removes that app entry. Edit any rule in the complete YAML area, or turn the switch off for text editing only.</string>
+    <string name="app_rules_cautions">The switch and list operations only update the draft. Toggling the display does not rewrite YAML. Only exact PROCESS-NAME package rules show app details; an icon failure does not mean an app is uninstalled. Existing duplicates remain visible; adding an existing package skips it. Fix invalid YAML before list operations. Save validates the resource graph and candidates; restart the proxy to apply changes. Connection package actions prefer rule sets with App list enabled. System restrictions may prevent process identification for some traffic.</string>
+</resources>
