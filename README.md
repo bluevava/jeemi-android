@@ -31,9 +31,41 @@
 
 当前设备验证主要来自 Android 16 x86_64 模拟器；ARM64 真机、API 26、16 KB 页设备和厂商后台策略仍需覆盖。曾观察到模拟器 ART 原生崩溃，Compose 固定版本不代表该问题已解决。自动订阅调度尚未实现。
 
-## 订阅管理界面
+## 界面预览（v0.1.5 开发版）
 
-<img src="assets/images/photo-sub.jpg" alt="Jeemi Android 订阅管理界面" width="360">
+以下为 **v0.1.5 开发版**的实际界面。当前 v0.1.4 正式版尚未包含这套内置分流方案；图片使用演示订阅与连接数据。
+
+<p>
+  <img src="assets/images/app-routing/00-home.png" alt="Jeemi 主页：运行控制、模式、协议栈与主题" width="230">
+  <img src="assets/images/app-routing/02-subscription.png" alt="订阅卡绑定应用分流规则，并用代理选择器选择节点" width="230">
+  <img src="assets/images/app-routing/09-configuration.png" alt="本地配置中的应用分流规则及配置关系链入口" width="230">
+</p>
+
+## 从连接详情快速添加 App 分流
+
+内置的 **应用分流规则**提供 **🚀 代理选择器**和三份空规则集：**直连 / 代理 / 屏蔽**。绑定订阅后，无须手写 YAML，即可逐步添加自己的 App 分流。
+
+1. 在订阅卡的 **配置** 行绑定 **应用分流规则**。
+2. 主页选择 **规则**；在 **运行参数 → 基础设置**中把进程匹配设为 **始终匹配**，保存后启动或重启代理。
+3. 打开目标 App 产生连接，在 **更多 → 连接 → 连接详情**中，点击**应用包名**旁的 **添加到规则集**。
+4. 选择 **直连 / 代理 / 屏蔽**，核对预览并保存；**重启代理后生效**。
+
+<p>
+  <img src="assets/images/app-routing/05-connection-details.png" alt="找到应用包名旁的添加到规则集按钮" width="230">
+  <img src="assets/images/app-routing/06-select-ruleset.png" alt="为 App 选择直连、代理或屏蔽规则集" width="230">
+  <img src="assets/images/app-routing/08-app-list.png" alt="保存后在 App 列表中查看应用图标、名称、包名与操作" width="230">
+</p>
+
+**[查看完整图文教程 →](docs/app-routing.md)** · [English guide](docs/app-routing.en.md)
+
+改变 App 去向时，还要移除旧集合中的规则；添加不会自动迁移，重复规则按顺序首次匹配。主页局域网绕过仍优先。
+
+<details>
+<summary>查看 v0.1.4 订阅界面</summary>
+
+<img src="assets/images/photo-sub.jpg" alt="Jeemi Android v0.1.4 订阅管理界面" width="360">
+
+</details>
 
 ## 致谢
 
