@@ -107,7 +107,7 @@ fun JeemiApp(state: AppState, model: JeemiViewModel) {
                 } },
                 actions = {
                     if (state.downloadBusy) TextButton(onClick = model::cancelDownload, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.cancel)) }
-                    val restarting = runtime is RuntimeState.Running || runtime == RuntimeState.Restarting
+                    val restarting = runtime is RuntimeState.Running || runtime == RuntimeState.Restarting || runtime == RuntimeState.Updating
                     val quickAction = stringResource(if (restarting) R.string.vpn_restart else R.string.vpn_quick_start)
                     IconButton(onClick = { authorization.request(runtime is RuntimeState.Running) },
                         enabled = state.loaded && !state.busy && state.candidate != null && !state.projectionFailed &&

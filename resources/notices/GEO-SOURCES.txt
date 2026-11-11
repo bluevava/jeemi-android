@@ -1,4 +1,4 @@
-Jeemi-Android bundled GEO snapshot: 2026-09-09T00:26:41Z
+Jeemi-Android bundled GEO snapshot: 2026-11-11T02:03:50Z
 Distribution: MetaCubeX/meta-rules-dat
 https://github.com/MetaCubeX/meta-rules-dat
 License and upstream attribution: GEO-LICENSE.txt and

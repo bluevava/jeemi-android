@@ -14,10 +14,14 @@ import java.net.Proxy
 import java.net.URL
 import java.net.URLEncoder
 import java.security.MessageDigest
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 data class VpnRequest(val profileId: String, val yaml: String, val ipv6: Boolean, val revision: String = configurationRevision(yaml), val logLevel: String = "silent",
     val selections: Map<String, String> = emptyMap(), val defaults: Map<String, String> = emptyMap(),
-    val externalUIVersion: String = "", val tunStack: io.jeemi.android.domain.TunStack = io.jeemi.android.domain.TunStack.MIPS)
+    val externalUIVersion: String = "", val tunStack: io.jeemi.android.domain.TunStack = io.jeemi.android.domain.TunStack.MIPS,
+    val libraryRevision: Long = -1)
 data class LiveProxy(val type: String, val now: String, val members: List<String>, val delay: Int?, val manualDelay: Int? = null)
 data class LiveSession(val profileId: String, val revision: String, val geoRevision: String,
     val proxies: Map<String, LiveProxy> = emptyMap(), val sessionId: String = java.util.UUID.randomUUID().toString())
@@ -28,7 +32,15 @@ fun configurationRevision(yaml: String): String = MessageDigest.getInstance("SHA
 class VpnController(private val context: Context) {
     val state = MutableStateFlow<RuntimeState>(RuntimeState.Stopped)
     val live = MutableStateFlow<LiveSession?>(null)
+    val updateFailed = MutableStateFlow(false)
+    internal val configurationChanges = java.util.concurrent.Semaphore(1)
+    internal fun <T> withConfiguration(block: () -> T): T {
+        check(configurationChanges.tryAcquire())
+        try { return block() } finally { configurationChanges.release() }
+    }
     @Volatile internal var request: VpnRequest? = null
+    @Volatile internal var appliedRequest: VpnRequest? = null
+    private var automaticCommandId: String? = null
     @Volatile internal var api: CoreApi? = null
     @Volatile internal var dnsSession: JSONObject? = null
     // Service ownership and UI reconciliation run on the main thread. A resume
@@ -41,6 +53,7 @@ class VpnController(private val context: Context) {
     }
     fun start(next: VpnRequest) {
         if (state.value.transitioning || state.value is RuntimeState.Running) return
+        automaticCommandId = null
         request = next
         state.value = RuntimeState.Starting
         try { ContextCompat.startForegroundService(context, Intent(context, JeemiVpnService::class.java).setAction("start")) }
@@ -49,6 +62,7 @@ class VpnController(private val context: Context) {
     fun restart(next: VpnRequest) {
         if (state.value.transitioning) return
         if (state.value !is RuntimeState.Running) { start(next); return }
+        automaticCommandId = null
         val previous = request
         val previousState = state.value
         request = next
@@ -59,6 +73,7 @@ class VpnController(private val context: Context) {
     fun stop() {
         if (state.value is RuntimeState.Failed || state.value == RuntimeState.Stopped) { clear(false); return }
         if (state.value == RuntimeState.Stopping) return
+        automaticCommandId = null
         val previous = request
         val previousState = state.value
         request = null
@@ -66,18 +81,33 @@ class VpnController(private val context: Context) {
         try { context.startService(Intent(context, JeemiVpnService::class.java).setAction("stop")) }
         catch (error: Exception) { request = previous; state.value = previousState; throw error }
     }
-    internal fun clearSession() { api = null; dnsSession = null; live.value = null }
+    // Only the owning, already authorized service can request this fallback.
+    internal fun reconfigure(next: VpnRequest, owner: JeemiVpnService, expected: VpnRequest) {
+        check(service === owner && request === expected && state.value is RuntimeState.Running)
+        request = next
+        state.value = RuntimeState.Restarting
+        automaticCommandId = java.util.UUID.randomUUID().toString()
+        try { context.startService(Intent(context, JeemiVpnService::class.java).setAction("reconfigure").putExtra("command", automaticCommandId)) }
+        catch (error: Exception) { automaticCommandId = null; request = expected; state.value = RuntimeState.Running(requireNotNull(appliedRequest).revision); throw error }
+    }
+    internal fun consumeAutomaticCommand(id: String?): Boolean {
+        if (id == null || id != automaticCommandId) return false
+        automaticCommandId = null
+        return true
+    }
+    internal fun clearSession() { api = null; dnsSession = null; live.value = null; appliedRequest = null; updateFailed.value = false }
     internal fun clear(failed: Boolean) {
+        automaticCommandId = null
         request = null; clearSession()
         state.value = if (failed) RuntimeState.Failed("core_failed") else RuntimeState.Stopped
     }
     fun matches(profile: String?, revision: String?, geo: String): Boolean =
         state.value is RuntimeState.Running && live.value?.let { it.profileId == profile && it.revision == revision && it.geoRevision == geo } == true
     fun dashboardAddress(profile: String?, revision: String?, geo: String): String {
-        require(matches(profile, revision, geo) && !request?.externalUIVersion.isNullOrEmpty())
+        require(matches(profile, revision, geo) && !appliedRequest?.externalUIVersion.isNullOrEmpty())
         return requireNotNull(api).dashboardAddress()
     }
-    fun select(profile: String, revision: String, geo: String, group: String, node: String, reset: String) {
+    fun select(profile: String, revision: String, geo: String, group: String, node: String, reset: String) = withConfiguration {
         require(matches(profile, revision, geo))
         val client = requireNotNull(api)
         val previous = requireNotNull(live.value?.proxies?.get(group))
@@ -97,16 +127,17 @@ class VpnController(private val context: Context) {
         }
         refresh(client)
     }
-    fun refreshProvider(profile: String, revision: String, geo: String, name: String) {
+    fun refreshProvider(profile: String, revision: String, geo: String, name: String) = withConfiguration {
         require(matches(profile, revision, geo))
         requireNotNull(api).call("/providers/rules/" + encode(name), "PUT")
     }
     fun test(profile: String, revision: String, geo: String, node: String): Int? {
         require(matches(profile, revision, geo))
         val client = requireNotNull(api)
+        val sessionId = live.value?.sessionId
         val value = runCatching { client.call("/proxies/" + encode(node) + "/delay?timeout=5000&url=" +
             encode("http://www.google.com/generate_204"), timeout = 7000).getInt("delay") }.getOrNull()
-        if (matches(profile, revision, geo) && api === client) {
+        if (matches(profile, revision, geo) && api === client && live.value?.sessionId == sessionId) {
             live.update { current ->
                 val proxy = current?.proxies?.get(node)
                 if (current != null && proxy != null) current.copy(proxies = current.proxies + (node to proxy.copy(delay = value ?: -1, manualDelay = value ?: -1))) else current
@@ -115,6 +146,7 @@ class VpnController(private val context: Context) {
         return value
     }
     internal fun refresh(client: CoreApi) {
+        val previous = live.value ?: return
         val entries = client.call("/proxies").getJSONObject("proxies")
         // /proxies includes configured proxies/groups, but HTTP provider leaves
         // are exposed separately. Only members referenced by the live groups
@@ -139,9 +171,8 @@ class VpnController(private val context: Context) {
                 }
             }
         }
-        val previous = live.value ?: return
         live.update { current ->
-            if (api !== client || current == null || current.revision != previous.revision) current
+            if (api !== client || current == null || current.sessionId != previous.sessionId || state.value == RuntimeState.Updating) current
             else current.copy(proxies = entries.keys().asSequence().filterNot { it.startsWith("__jeemi_dns_") }.associateWith { name ->
                 val value = entries.getJSONObject(name)
                 val all = value.optJSONArray("all")
@@ -173,6 +204,29 @@ internal fun preferredSelection(members: List<String>, saved: String?, default: 
     saved?.takeIf { it in members } ?: default?.takeIf { it in members } ?: members.firstOrNull()
 
 internal class CoreApi(private val port: Int, private val secret: String) {
+    // A cancelled service disconnects the request immediately; no reload can
+    // publish into a replacement session. The old child is then stopped normally.
+    suspend fun reload(path: String): Unit = suspendCancellableCoroutine { continuation ->
+        // force updates ordinary listeners too; mihomo compares TUN options
+        // independently and keeps an identical service-owned descriptor alive.
+        val connection = open("/configs?force=true", 60_000)
+        // Android's disconnect may wait for a blocking read lock. Never hold
+        // the service main thread while cancelling; it must stop the child/FD.
+        continuation.invokeOnCancellation { reloadCancellationExecutor.execute { connection.disconnect() } }
+        reloadExecutor.execute {
+            try {
+                if (!continuation.isActive) return@execute
+                connection.requestMethod = "PUT"
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.outputStream.use { it.write(JSONObject().put("path", path).toString().toByteArray()) }
+                check(connection.responseCode == 204)
+                if (continuation.isActive) continuation.resume(Unit)
+            } catch (error: Exception) {
+                if (continuation.isActive) continuation.resumeWithException(error)
+            } finally { connection.disconnect() }
+        }
+    }
     internal fun dashboardAddress(): String =
         "http://127.0.0.1:$port/ui/#/setup?protocol=http&hostname=127.0.0.1&port=$port&disableUpgradeCore=1&disableTunMode=1&secret=" + encode(secret)
     internal fun open(path: String, timeout: Int): HttpURLConnection =
@@ -197,5 +251,11 @@ internal class CoreApi(private val port: Int, private val secret: String) {
             return if (text.isBlank()) JSONObject() else JSONObject(text)
         } finally { connection.disconnect() }
     }
+}
+private val reloadExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "jeemi-core-reload").apply { isDaemon = true }
+}
+private val reloadCancellationExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "jeemi-core-reload-cancel").apply { isDaemon = true }
 }
 internal fun encode(value: String): String = URLEncoder.encode(value, "UTF-8").replace("+", "%20")

@@ -85,6 +85,7 @@ func normalizeStrategyGroup(input StrategyGroup, now time.Time) (StrategyGroup, 
 		input.Lazy = false
 		input.Filter = NodeFilter{ProxyTypes: []string{}, NamePatterns: []string{}}
 		input.IncludeAllProviders = false
+		input.AutoSelect = false
 	} else {
 		input.Policy = PolicyTarget{}
 		if !contains([]string{"select", "url-test", "fallback", "load-balance"}, input.Type) {
@@ -93,7 +94,10 @@ func normalizeStrategyGroup(input StrategyGroup, now time.Time) (StrategyGroup, 
 		if input.Icon != "" && !isHTTPURL(input.Icon) {
 			return StrategyGroup{}, fmt.Errorf("selector icon must use http or https")
 		}
-		if input.Type == "select" {
+		if input.Type != "select" {
+			input.AutoSelect = false
+		}
+		if input.Type == "select" && !input.AutoSelect {
 			input.URL = ""
 			input.Interval = 0
 			input.Tolerance = 0
@@ -112,7 +116,7 @@ func normalizeStrategyGroup(input StrategyGroup, now time.Time) (StrategyGroup, 
 			if input.Interval < 10 || input.Interval > 86400 {
 				return StrategyGroup{}, fmt.Errorf("selector interval must be between 10 and 86400 seconds")
 			}
-			if input.Type == "url-test" {
+			if input.Type == "url-test" || input.AutoSelect {
 				if input.Tolerance < 0 || input.Tolerance > 60000 {
 					return StrategyGroup{}, fmt.Errorf("selector tolerance is invalid")
 				}
@@ -180,6 +184,10 @@ func normalizeFilter(input NodeFilter) (NodeFilter, error) {
 
 func normalizeRuleSet(input RuleSet, now time.Time) (RuleSet, error) {
 	input.Name = strings.TrimSpace(input.Name)
+	input.Emoji = strings.TrimSpace(input.Emoji)
+	if input.Emoji != "" && !IsSupportedSelectorEmoji(input.Emoji) {
+		return RuleSet{}, fmt.Errorf("rule set emoji must use a supported option")
+	}
 	input.Description = strings.TrimSpace(input.Description)
 	input.SourceType = strings.ToLower(strings.TrimSpace(input.SourceType))
 	input.Behavior = strings.ToLower(strings.TrimSpace(input.Behavior))

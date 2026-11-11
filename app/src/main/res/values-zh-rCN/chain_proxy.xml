@@ -102,7 +102,7 @@
     <string name="conversion_unsupported_transport">已跳过无法等价转换的传输配置。</string>
     <string name="conversion_unsupported_udp_setting">已跳过要求关闭 UDP 的 TUIC 节点，当前 mihomo 没有对应的节点开关。</string>
     <string name="conversion_unused_certificate">证书未匹配到任何已转换的 TLS 节点。</string>
-    <string name="help_chain_cautions">原节点仍可选择，生成节点名称为“B ⇐ A · 后缀”。仅使用配置中已知的顶层中继，不展开嵌套选择器或远程 provider；已有非 DIRECT 链路的中继会跳过。运行时修改待重启生效，不自动启动 VPN。生成配置不代表真实链路连通。</string>
+    <string name="help_chain_cautions">原节点仍可选择，生成节点名称为“B ⇐ A · 后缀”。仅使用配置中已知的顶层中继，不展开嵌套选择器或远程 provider；已有非 DIRECT 链路的中继会跳过。运行中修改保存后自动应用；停止时不自动启动 VPN。生成配置不代表真实链路连通。</string>
     <string name="help_chain_filter_cautions">固定先或、再与、最后排除；全角 ｜ ＆ ！ 等同半角 | &amp; !。忽略大小写和每个条件首尾空白，包括全角空格，内部空格按字面匹配。不支持括号或正则，选择器自身的过滤仍生效。无选择器或无中继时显示实际忽略原因，不创建虚假节点。</string>
     <string name="help_chain_filter_purpose">目标筛选匹配最终选择器名称；中继筛选匹配各选择器内部的 A。目标筛选留空只使用首条顶层 MATCH/FINAL 指向的选择器。URL 的落地筛选只控制导入哪些 B。</string>
     <string name="help_chain_filter_scenarios">hk | jp &amp; gm &amp; !ev 与 hk &amp; gm &amp; !ev | jp 等价：包含 hk 或 jp，同时包含 gm，排除包含 ev。空中继/落地条件表示全部。</string>

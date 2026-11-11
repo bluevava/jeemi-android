@@ -38,6 +38,12 @@ internal fun SubscriptionImportDialog(item: Subscription?, state: AppState, mode
     var description by rememberSaveable(item?.id) { mutableStateOf(item?.description.orEmpty()) }
     var icon by rememberSaveable(item?.id) { mutableStateOf(item?.icon.orEmpty()) }
     var handler by rememberSaveable(item?.id) { mutableStateOf(item?.handlerId) }
+    val original = remember(item?.id) { item }
+    var updateInterval by rememberSaveable(item?.id) { mutableIntStateOf(item?.updateIntervalMinutes?.takeIf { it > 0 } ?: 60) }
+    DisposableEffect(model) {
+        val pause = model.pauseSubscriptionUpdates()
+        onDispose { pause.close() }
+    }
     var method by rememberSaveable(item?.id) { mutableIntStateOf(if (item == null) 0 else 1) }
     var iconEditor by rememberSaveable { mutableStateOf(false) }
     var scanning by rememberSaveable { mutableStateOf(false) }
@@ -70,8 +76,9 @@ internal fun SubscriptionImportDialog(item: Subscription?, state: AppState, mode
     EditorDialog(stringResource(if (item == null) R.string.import_subscription else R.string.edit), state.busy, dismiss, action = {
         if (state.downloadBusy) TextButton(onClick = model::cancelDownload, shape = MaterialTheme.shapes.small) { Text(stringResource(R.string.cancel)) }
         TextButton(onClick = {
-            if (method == 0 && item == null) model.importUrl(name, url, description, icon, handler)
-            else model.importText(name, draft, description, if (item != null) url else "", item?.id, icon, handler, true)
+            if (method == 0 && item == null) model.importUrl(name, url, description, icon, handler, updateInterval)
+            else model.importText(name, draft, description, if (item != null) url else "", item?.id, icon, handler, true,
+                autoUpdateIntervalMinutes = updateInterval, expected = original)
         }, enabled = !state.busy && !detecting && (if (method == 0 && item == null) scannedSubscriptionUrl(url) != null else draft.isNotBlank()), shape = MaterialTheme.shapes.small) {
             Text(stringResource(if (item == null) R.string.import_action else R.string.save))
         }
@@ -84,6 +91,18 @@ internal fun SubscriptionImportDialog(item: Subscription?, state: AppState, mode
             if (method == 0 || item != null) OutlinedTextField(url, { url = it.take(8192) }, Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.subscription_url)) }, singleLine = true, enabled = !state.busy,
                 trailingIcon = { IconButton(onClick = ::scan, enabled = !state.busy) { Icon(Icons.Outlined.QrCodeScanner, stringResource(R.string.scan_subscription_qr)) } })
+            if ((item == null && method == 0) || (item != null && url.isNotBlank())) {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                        ChoiceField(stringResource(R.string.subscription_update_interval), updateInterval.toString(),
+                            listOf(10 to R.string.subscription_update_10m, 30 to R.string.subscription_update_30m,
+                                60 to R.string.subscription_update_1h, 180 to R.string.subscription_update_3h,
+                                720 to R.string.subscription_update_12h).map { it.first.toString() to stringResource(it.second) },
+                            !state.busy) { updateInterval = it.toInt() }
+                    }
+                    FeatureHelp(SubscriptionUpdateHelp)
+                }
+            }
             Row {
                 OutlinedButton(onClick = { iconEditor = true; if (icon.isBlank() && url.isNotBlank() && method == 0) detectIcon() }, enabled = !state.busy, shape = MaterialTheme.shapes.small) {
                     SubscriptionIcon(icon, if (icon == item?.icon) item.iconImage else "")

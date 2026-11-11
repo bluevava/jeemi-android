@@ -110,7 +110,8 @@ class ResourceWorkspaceTest {
                 capture(name)
             }
             compose.runOnUiThread { model.closeResource() }
-            click(R.string.chain_proxies)
+            compose.onNodeWithTag("resource-category-menu").performClick()
+            compose.onNodeWithTag("resource-category-CHAIN").performClick()
             capture("chains-en")
             compose.runOnUiThread { model.openChainGroup(model.state.value.chains.groups.single()) }
             compose.onNodeWithTag("chain-check").assertIsDisplayed()

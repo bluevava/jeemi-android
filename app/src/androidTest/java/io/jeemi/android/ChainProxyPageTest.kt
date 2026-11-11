@@ -43,7 +43,8 @@ class ChainProxyPageTest {
     }
     private fun chainPage() {
         navigate(R.string.configuration)
-        compose.onNode(hasText(label(R.string.chain_proxies)) and hasClickAction()).performClick()
+        compose.onNodeWithTag("resource-category-menu").performClick()
+        compose.onNodeWithTag("resource-category-CHAIN").performClick()
     }
     private fun language(tag: String) {
         compose.runOnIdle { AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag)) }

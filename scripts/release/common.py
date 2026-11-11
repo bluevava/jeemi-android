@@ -69,6 +69,21 @@ def apk_name(tag: str, architecture: str) -> str:
     return f"Jeemi-Android-{tag}-{architecture}.apk"
 
 
+def download_table(tag: str) -> str:
+    """Direct links to the existing versioned assets; Markdown owns badge clicks."""
+    base = f"https://github.com/{PUBLIC_REPOSITORY}/releases"
+    rows = ["| 版本 | 适用设备 | APK 下载 | 校验 |", "| --- | --- | --- | --- |"]
+    for architecture, device, badge, color in (
+        ("arm64", "ARM64 手机 / 平板", "ARM64", "3DDC84"),
+        ("amd64", "x86_64 设备 / 模拟器", "x86__64", "0078D6"),
+    ):
+        name = apk_name(tag, architecture)
+        url = f"{base}/download/{tag}/{name}"
+        image = f"https://img.shields.io/badge/Android-{badge}_APK-{color}?style=for-the-badge&logo=android&logoColor=white"
+        rows.append(f"| [{tag}]({base}/tag/{tag}) | {device} | [![下载 {architecture} APK]({image})]({url}) | [SHA-256]({url}.sha256) |")
+    return "\n".join(rows) + "\n"
+
+
 def github_outputs(values: dict) -> None:
     output = os.environ.get("GITHUB_OUTPUT")
     if output:

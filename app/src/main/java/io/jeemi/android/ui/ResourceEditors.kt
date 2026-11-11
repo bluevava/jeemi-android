@@ -91,9 +91,9 @@ internal fun StrategyGroupEditor(draft: LocalResource, state: AppState, model: J
         CollapsibleCard(stringResource(R.string.selector_parameters), GroupsHelp, initiallyOpen = true) {
             FixedChoiceField(stringResource(R.string.selector_type), content.optString("type"),
                 listOf("select", "url-test", "fallback", "load-balance").map { it to it }, !state.busy) { update("type", it) }
-            ChoiceField(stringResource(R.string.selector_emoji), content.optString("emoji"),
-                listOf("" to stringResource(R.string.none_items)) + listOf("🌐", "🚀", "⚡", "🛡️", "🔒", "🎮", "🎬", "🎵", "💬", "💻", "📱", "☁️", "🏠", "⭐", "🔥", "💎", "🌟", "🌈", "🍀", "🐱", "🦊", "🐼", "🐬").map { it to it }, !state.busy) { update("emoji", it) }
             JsonText(content, "icon", R.string.selector_icon_url, !state.busy, change = ::update)
+            if (content.optString("type") == "select") SwitchRow(stringResource(R.string.selector_auto_companion),
+                content.optBoolean("autoSelect"), !state.busy) { update("autoSelect", it) }
         }
         CollapsibleCard(stringResource(R.string.node_filtering), GroupsHelp) {
             val filter = content.optJSONObject("filter") ?: JSONObject()
@@ -115,10 +115,10 @@ internal fun StrategyGroupEditor(draft: LocalResource, state: AppState, model: J
                 }
             }
         }
-        if (content.optString("type") != "select") CollapsibleCard(stringResource(R.string.test_nodes), GroupsHelp, initiallyOpen = true) {
+        if (content.optString("type") != "select" || content.optBoolean("autoSelect")) CollapsibleCard(stringResource(R.string.test_nodes), GroupsHelp, initiallyOpen = true) {
             JsonText(content, "url", R.string.test_url, !state.busy, change = ::update)
             JsonText(content, "interval", R.string.interval_seconds, !state.busy, number = true, change = ::update)
-            if (content.optString("type") == "url-test") JsonText(content, "tolerance", R.string.tolerance_ms, !state.busy, number = true, change = ::update)
+            if (content.optString("type") == "url-test" || content.optBoolean("autoSelect")) JsonText(content, "tolerance", R.string.tolerance_ms, !state.busy, number = true, change = ::update)
             if (content.optString("type") == "load-balance") ChoiceField(stringResource(R.string.balance_strategy), content.optString("strategy"),
                 listOf("consistent-hashing", "round-robin", "sticky-sessions").map { it to it }, !state.busy) { update("strategy", it) }
             SwitchRow(stringResource(R.string.lazy_test), content.optBoolean("lazy", true), !state.busy) { update("lazy", it) }

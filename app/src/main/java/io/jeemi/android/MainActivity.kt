@@ -18,6 +18,14 @@ import io.jeemi.android.ui.theme.JeemiTheme
 import io.jeemi.android.ui.theme.isJeemiDark
 
 class MainActivity : AppCompatActivity() {
+    override fun onStart() {
+        super.onStart()
+        (application as JeemiApplication).uiStarted()
+    }
+    override fun onStop() {
+        (application as JeemiApplication).uiStopped()
+        super.onStop()
+    }
     override fun onResume() {
         super.onResume()
         (application as JeemiApplication).runtime.reconcile()

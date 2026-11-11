@@ -57,7 +57,7 @@ class BusinessBridgeTest {
         val context = ApplicationProvider.getApplicationContext<JeemiApplication>()
         val core = BundledCore(context)
         assertTrue(core.executable.canonicalPath.startsWith(context.applicationInfo.nativeLibraryDir))
-        assertTrue(core.version().contains("v1.19.32-jeemi.3"))
+        assertTrue(core.version().contains("v1.19.33-jeemi.1"))
     }
 
     @Test fun stackPreferencesRoundTripAndDefaultToMipsWithoutChangingSubscriptions() {

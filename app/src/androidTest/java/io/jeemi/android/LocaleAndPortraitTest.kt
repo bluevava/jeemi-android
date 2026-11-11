@@ -71,7 +71,7 @@ class LocaleAndPortraitTest {
         }
     }
     @Test fun nestedFieldDraftSurvivesLocaleAndActivityRecreation() {
-        waitLoaded(); click(R.string.configuration); click(R.string.new_resource)
+        waitLoaded(); click(R.string.configuration); compose.onNodeWithTag("resource-create").performClick()
         compose.onNode(hasText(text(R.string.name)) and hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("Field draft")
         compose.onNodeWithTag("field-tree-search").performScrollTo().performTextInput("keep-alive-interval")
         compose.onNodeWithTag("field-name-/keep-alive-interval").performScrollTo().performClick()

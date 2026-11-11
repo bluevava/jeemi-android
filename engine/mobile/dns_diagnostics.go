@@ -29,6 +29,24 @@ func PrepareDNSDiagnostics(configuration, secret string) (string, error) {
 	return string(result), nil
 }
 
+// Reuse the authenticated endpoints while recomputing MATCH/provider metadata.
+// The session is process-private and is never accepted from a subscription.
+func ReloadDNSDiagnostics(configuration, sessionJSON string) (string, error) {
+	var session dnstool.Session
+	if len(configuration) > maxBytes || len(sessionJSON) > 1<<20 || json.Unmarshal([]byte(sessionJSON), &session) != nil {
+		return "", fmt.Errorf("dns_session_failed")
+	}
+	config, err := dnstool.Apply([]byte(configuration), &session)
+	if err != nil {
+		return "", fmt.Errorf("dns_session_failed")
+	}
+	result, _ := json.Marshal(struct {
+		Configuration string          `json:"configuration"`
+		Session       dnstool.Session `json:"session"`
+	}{string(config), session})
+	return string(result), nil
+}
+
 type dnsInput struct {
 	TimeoutMS  int64            `json:"timeoutMS"`
 	Request    dnsquery.Request `json:"request"`

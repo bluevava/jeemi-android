@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="selector_auto_companion">Paired automatic selector</string>
+    <string name="runtime_updating">Applying configuration</string>
+    <string name="configuration_pending">Configuration pending</string>
+    <string name="runtime_update_failed">Update failed · previous configuration active</string>
+</resources>

@@ -1,0 +1,10 @@
+Jeemi-Android bundled offline routing lists
+
+Source: MetaCubeX/meta-rules-dat
+https://github.com/MetaCubeX/meta-rules-dat/tree/1fc5de325d54d3b77d6b86a1db900c5e48ae1003
+Revision: 1fc5de325d54d3b77d6b86a1db900c5e48ae1003
+Snapshot dates: 2026-11-06 / 2026-11-11
+License: GNU GPL version 3; see BUILTIN_RULES_LICENSE.txt.
+
+Fixed snapshots migrated from desktop Jeemi 6dd9d314c4377311ab4786801c865833218d8ff7.
+Android adaptation, exact package rules and configuration templates are covered by Jeemi's GPL-3.0 license.

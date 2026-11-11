@@ -66,14 +66,109 @@ var (
 		"114.114.114.114",
 		"223.5.5.5",
 	}
+	// Home defaults requested on 2026-11-11; no GEO filter entries.
 	defaultDNSFakeIPFilter = []string{
+		// Local networks.
 		"+.lan",
 		"+.local",
-		"+.home.arpa",
 		"+.localdomain",
+		"+.home.arpa",
 		"+.localhost",
+		"+.direct",
+		"+.example",
+		"+.invalid",
+		"+.test",
+		"+._msdcs",
+		// Time synchronization.
+		"+.pool.ntp.org",
+		"+.ntp.org.cn",
+		"+.time.edu.cn",
+		"time.*.com",
+		"time.*.gov",
+		"time.*.edu.cn",
+		"time.*.apple.com",
+		"time-ios.apple.com",
+		"time1.cloud.tencent.com",
+		"ntp.*.com",
+		// Carrier authentication.
+		"open.e.189.cn",
+		"opencloud.wostore.cn",
+		"id.mail.wo.cn",
+		"mdn.open.wo.cn",
+		"hmrz.wo.cn",
+		"cable.auth.com",
+		"id6.me",
+		"+.10010.com",
+		"+.wosms.cn",
+		"+.cmpassport.com",
+		"+.icitymobile.mobi",
+		"+.jegotrip.com.cn",
+		"+.pub.3gppnetwork.org",
+		// Connectivity checks.
+		"network-test.debian.org",
+		"detectportal.firefox.com",
+		"resolver1.opendns.com",
 		"+.msftconnecttest.com",
 		"+.msftncsi.com",
+		"+.xn--ngstr-lra8j.com",
+		"+.services.googleapis.cn",
+		// Router and smart-home interfaces.
+		"local.adguard.org",
+		"injections.adguard.org",
+		"heartbeat.belkin.com",
+		"+.miwifi.com",
+		"+.router.asus.com",
+		"+.linksys.com",
+		"+.linksyssmartwifi.com",
+		// STUN, P2P and games.
+		"stun.*",
+		"na.b.g-tun.com",
+		"+.stun.playstation.net",
+		"+.srv.nintendo.net",
+		"+.cdn.nintendo.net",
+		"+.xboxlive.com",
+		"+.xbox.microsoft.com",
+		"xnotify.xboxlive.com",
+		"+.battle.net",
+		"+.battlenet.com.cn",
+		"+.blzstatic.cn",
+		"+.wotgame.cn",
+		"+.wggames.cn",
+		"+.wowsgame.cn",
+		"+.wargaming.net",
+		"+.square-enix.com",
+		"+.finalfantasyxiv.com",
+		"+.ffxiv.com",
+		"+.ff14.sdo.com",
+		"ff.dorado.sdo.com",
+		// Domestic services and financial authentication.
+		"+.ptlogin2.qq.com",
+		"+.sec.qq.com",
+		"+.weixin.qq.com",
+		"+.pingan.com.cn",
+		"+.cmbchina.com",
+		"+.cmbimg.com",
+		"+.microdone.cn",
+		"+.uu.163.com",
+		"ps.res.netease.com",
+		"+.mcdn.bilivideo.cn",
+		// Audio and music.
+		"+.music.163.com",
+		"+.126.net",
+		"+.taihe.com",
+		"+.kugou.com",
+		"+.kuwo.cn",
+		"+.sanook.com",
+		"+.joox.com",
+		"+.y.qq.com",
+		"+.music.tc.qq.com",
+		"+.qqmusic.qq.com",
+		"+.xiami.com",
+		"+.music.migu.cn",
+		// Developer and specific services.
+		"proxy.golang.org",
+		"app.yinxiang.com",
+		"lens.l.google.com",
 	}
 	defaultLANBypassRules = []string{
 		"DOMAIN,localhost,DIRECT",
@@ -154,6 +249,7 @@ type Preferences struct {
 	DNSFakeIPFilter                       []string `json:"dnsFakeIpFilter"`
 	DNSFakeIPFilterEnabled                bool     `json:"dnsFakeIpFilterEnabled"`
 	DNSFakeIPFilterMerge                  string   `json:"dnsFakeIpFilterMerge"`
+	DNSFakeIPFilterDefaultsVersion        int      `json:"dnsFakeIpFilterDefaultsVersion,omitempty"`
 	DNSProxyServerNameservers             []string `json:"dnsProxyServerNameservers"`
 	DNSProxyServerNameserverEnabled       bool     `json:"dnsProxyServerNameserverEnabled"`
 	DNSProxyServerNameserverMerge         string   `json:"dnsProxyServerNameserverMerge"`
@@ -199,6 +295,7 @@ func DefaultPreferences() Preferences {
 		DNSFakeIPFilter:                       append([]string{}, defaultDNSFakeIPFilter...),
 		DNSFakeIPFilterEnabled:                true,
 		DNSFakeIPFilterMerge:                  MergeModeOverride,
+		DNSFakeIPFilterDefaultsVersion:        1,
 		DNSProxyServerNameservers:             []string{},
 		DNSProxyServerNameserverEnabled:       false,
 		DNSProxyServerNameserverMerge:         MergeModeAppend,
@@ -220,6 +317,8 @@ func DefaultPreferences() Preferences {
 func (preferences *Preferences) UnmarshalJSON(contents []byte) error {
 	type plainPreferences Preferences
 	decoded := plainPreferences(DefaultPreferences())
+	// Reading older JSON is not proof that its storage migration committed.
+	decoded.DNSFakeIPFilterDefaultsVersion = 0
 	if err := json.Unmarshal(contents, &decoded); err != nil {
 		return err
 	}

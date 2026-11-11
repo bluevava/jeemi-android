@@ -26,14 +26,14 @@
 @rem Set local scope for the variables with windows NT shell
 if "%OS%"=="Windows_NT" setlocal
 
-set DIRNAME=%~dp0
+set "DIRNAME=%~dp0"
 if "%DIRNAME%"=="" set DIRNAME=.
 @rem This is normally unused
-set APP_BASE_NAME=%~n0
-set APP_HOME=%DIRNAME%
+set "APP_BASE_NAME=%~n0"
+set "APP_HOME=%DIRNAME%"
 
 @rem Resolve any "." and ".." in APP_HOME to make it shorter.
-for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
+for %%i in ("%APP_HOME%") do set "APP_HOME=%%~fi"
 
 @rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
 set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
@@ -69,6 +69,15 @@ goto fail
 
 :execute
 @rem Setup the command line
+
+@rem Jeemi: inherit this absolute path in the launcher, daemon and worker JVMs.
+@rem Keep this customization when regenerating the wrapper.
+setlocal EnableDelayedExpansion
+set "JEEMI_CRASH_DIR=!APP_HOME!\temp\jvm-crashes"
+if not exist "!JEEMI_CRASH_DIR!\." mkdir "!JEEMI_CRASH_DIR!"
+if not exist "!JEEMI_CRASH_DIR!\." goto fail
+set "JAVA_TOOL_OPTIONS=!JAVA_TOOL_OPTIONS! "-XX:ErrorFile=!JEEMI_CRASH_DIR!\hs_err_pid%%p.log" "-XX:HeapDumpPath=!JEEMI_CRASH_DIR!""
+setlocal DisableDelayedExpansion
 
 set CLASSPATH=
 

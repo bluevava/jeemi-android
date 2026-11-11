@@ -141,7 +141,7 @@
     <string name="concurrent_tcp">TCP 并发连接</string>
     <string name="unified_delay">统一延迟</string>
     <string name="core_management">内置核心</string>
-    <string name="core_bundled_version">mihomo v1.19.32-jeemi.3 · 已内置</string>
+    <string name="core_bundled_version">mihomo v1.19.33-jeemi.1 · 已内置</string>
     <string name="export_error">无法写入所选文档，请选择可写位置。</string>
     <string name="resource_error">请检查资源名称、YAML 或脚本约定及组合策略。草稿已保留。</string>
     <string name="network_error">网络操作失败，请检查地址和当前网络连接。</string>

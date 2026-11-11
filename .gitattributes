@@ -18,3 +18,4 @@ gradlew text eol=lf
 *.jks binary
 # Resource bytes must survive export, Git checkout and APK packaging unchanged.
 resources/** -text whitespace=trailing-space,space-before-tab,cr-at-eol
+engine/internal/config/presets/data/** -text whitespace=trailing-space,space-before-tab,cr-at-eol

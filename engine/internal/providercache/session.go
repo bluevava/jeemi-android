@@ -46,12 +46,24 @@ func (s *Session) Prepare(configuration string) error {
 	if err != nil || len(entries) == 0 {
 		return err
 	}
+	// A long-lived VPN can reload many source identities. Bound the registry
+	// before touching the staged configuration or restoring another cache.
+	keys := make(map[string]bool, len(s.keys)+len(entries))
+	for key := range s.keys {
+		keys[key] = true
+	}
+	for _, item := range entries {
+		keys[item.key] = true
+	}
+	if len(keys) > 1024 {
+		return errInvalid
+	}
+	s.keys = keys
 	if err = makeDirectories(root, sessionDirectory); err != nil {
 		return err
 	}
 	var total int64
 	for _, item := range entries {
-		s.keys[item.key] = true
 		if ctx.Err() != nil {
 			continue
 		}

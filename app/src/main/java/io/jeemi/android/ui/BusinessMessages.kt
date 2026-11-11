@@ -6,6 +6,8 @@ import io.jeemi.android.R
 import io.jeemi.android.data.BusinessIssue
 
 internal fun businessIssueResource(code: String): Int = when (code) {
+    "resource_limit" -> R.string.error_resource_limit
+    "subscription_changed" -> R.string.subscription_changed
     "chain_busy" -> R.string.chain_busy
     "chain_cancelled" -> R.string.chain_cancelled
     "chain_candidate_invalid" -> R.string.chain_candidate_invalid

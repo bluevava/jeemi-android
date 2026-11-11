@@ -20,10 +20,7 @@ internal class ChainCandidateValidator(private val app: JeemiApplication) : Auto
                 "geox-url: {mmdb: 'jeemi-resource://managed', geoip: 'jeemi-resource://managed', geosite: 'jeemi-resource://managed', asn: 'jeemi-resource://managed'}",
                 "[{\"path\":\"/geox-url\",\"strategy\":\"replace\",\"conflictPolicy\":\"error\"}]")
             File(directory, "config.yaml").writeText(input)
-            val process = ProcessBuilder(BundledCore(app).executable.absolutePath, "-t", "-d", directory.absolutePath)
-                .redirectErrorStream(true).redirectOutput(File("/dev/null")).start()
-            try { check(process.waitFor(20, TimeUnit.SECONDS) && process.exitValue() == 0) }
-            finally { process.destroyForcibly() }
+            validateCoreFile(app, directory, File(directory, "config.yaml"))
         } catch (_: Exception) { throw IllegalArgumentException("chain_proxy:candidate_invalid") }
     }
 
@@ -31,4 +28,11 @@ internal class ChainCandidateValidator(private val app: JeemiApplication) : Auto
         check(directory.canonicalFile.parentFile == app.cacheDir.canonicalFile)
         directory.deleteRecursively()
     }
+}
+
+internal fun validateCoreFile(app: JeemiApplication, directory: File, configuration: File) {
+    val process = ProcessBuilder(BundledCore(app).executable.absolutePath, "-t", "-d", directory.absolutePath,
+        "-f", configuration.absolutePath).redirectErrorStream(true).redirectOutput(File("/dev/null")).start()
+    try { check(process.waitFor(20, TimeUnit.SECONDS) && process.exitValue() == 0) }
+    finally { process.destroyForcibly() }
 }

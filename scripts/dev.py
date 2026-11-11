@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import shlex
 import shutil
 import subprocess
 import sys
@@ -47,8 +48,29 @@ def sdk_path():
     raise RuntimeError("Android SDK not found. Set ANDROID_HOME, then run doctor.")
 
 
+def build_environment(environ=None):
+    """Bound build concurrency and route child JVM diagnostics without global changes."""
+    env = dict(os.environ if environ is None else environ)
+    crash_dir = ROOT / "temp/jvm-crashes"
+    crash_dir.mkdir(parents=True, exist_ok=True)
+    # JAVA_TOOL_OPTIONS reaches javac, Gradle workers and their startup failures.
+    diagnostics = (f'"-XX:ErrorFile={crash_dir.as_posix()}/hs_err_pid%p.log" '
+                   f'"-XX:HeapDumpPath={crash_dir.as_posix()}"')
+    options = env.get("JAVA_TOOL_OPTIONS", "").strip()
+    if not options.endswith(diagnostics):
+        env["JAVA_TOOL_OPTIONS"] = f"{options} {diagnostics}".strip()
+    # Keep explicit caller choices and unrelated Go flags; otherwise build packages
+    # sequentially, with at most two Go execution threads per compiler/test process.
+    flags = env.get("GOFLAGS", "")
+    if not any(flag == "-p" or flag.startswith("-p=") for flag in shlex.split(flags)):
+        env["GOFLAGS"] = f"{flags} -p=1".strip()
+    if not env.get("GOMAXPROCS"):
+        env["GOMAXPROCS"] = "2"
+    return env
+
+
 def environment():
-    env = os.environ.copy()
+    env = build_environment()
     sdk = sdk_path()
     java_home = env.get("JAVA_HOME")
     if not java_home:
@@ -101,6 +123,7 @@ def setup():
 def engine_fingerprint():
     digest = hashlib.sha256()
     sources = sorted(ENGINE.rglob("*.go")) + [ENGINE / "go.mod", ENGINE / "go.sum", ROOT / "scripts/toolchain.json", Path(__file__)]
+    sources += sorted(path for path in (ENGINE / "internal/config/presets/data").rglob("*") if path.is_file())
     for path in sources:
         digest.update(path.relative_to(ROOT).as_posix().encode())
         digest.update(path.read_bytes())
@@ -166,10 +189,23 @@ def verify_apk(path, abi):
             content = archive.read("assets/geodata/" + asset["file"])
             if len(content) != asset["bytes"] or hashlib.sha256(content).hexdigest() != asset["sha256"]:
                 raise RuntimeError("APK contains an unexpected GEO asset.")
+        for notice in (ROOT / "resources/notices").rglob("*"):
+            if notice.is_file():
+                name = "assets/" + notice.relative_to(ROOT / "resources/notices").as_posix()
+                if name not in archive.namelist() or archive.read(name) != notice.read_bytes():
+                    raise RuntimeError("APK notice is missing or differs from its source: " + name)
+        rules_dir = ROOT / "engine/internal/config/presets/data"
+        rules = [path for path in sorted(rules_dir.rglob("*")) if path.is_file()]
+        if rules and f"lib/{abi}/libgojni.so" not in libraries:
+            raise RuntimeError("APK is missing the business library with embedded routing rules.")
         # ELF64 program headers describe the load alignment independently of ZIP alignment.
         import struct
         for name in libraries:
             data = archive.read(name)
+            if name == f"lib/{abi}/libgojni.so":
+                for rule in rules:
+                    if rule.read_bytes() not in data:
+                        raise RuntimeError("APK embedded routing resource is missing or stale: " + rule.relative_to(rules_dir).as_posix())
             if data[:5] != b"\x7fELF\x02" or data[5] != 1:
                 raise RuntimeError(f"Expected little endian ELF64: {name}")
             offset = struct.unpack_from("<Q", data, 32)[0]
@@ -329,7 +365,7 @@ def main(argv=None):
     if args.command == "doctor": doctor()
     elif args.command == "scripts-test": scripts_test()
     elif args.command == "setup": setup()
-    elif args.command == "engine-test": run(["go", "test", "./..."], cwd=ENGINE)
+    elif args.command == "engine-test": run(["go", "test", "./..."], cwd=ENGINE, env=build_environment())
     elif args.command == "engine-build": engine_build()
     elif args.command == "core-build": run([sys.executable, ROOT / "scripts/mihomo_build.py"])
     elif args.command in ("core-fetch", "core-verify"):
@@ -339,7 +375,7 @@ def main(argv=None):
     elif args.command == "check":
         scripts_test()
         run([sys.executable, ROOT / "scripts/ui_contract.py"])
-        run(["go", "test", "./..."], cwd=ENGINE)
+        run(["go", "test", "./..."], cwd=ENGINE, env=build_environment())
         gradle("testDebugUnitTest", "lintDebug")
     elif args.command == "ui-check": run([sys.executable, ROOT / "scripts/ui_contract.py"])
     elif args.command == "build-debug": build_debug()

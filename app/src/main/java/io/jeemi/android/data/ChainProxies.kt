@@ -33,6 +33,8 @@ fun chainState(raw: String): ChainState {
 // Error text from JNI/HTTP is never displayed; retain only a fixed code/position.
 fun businessIssue(error: Exception): BusinessIssue? {
     val text = error.message.orEmpty()
+    if (text == "resource_limit") return BusinessIssue("resource_limit")
+    if (text == "subscription_changed") return BusinessIssue("subscription_changed")
     Regex("chain_proxy:([a-z_]+)").find(text)?.let { return BusinessIssue("chain_" + it.groupValues[1]) }
     Regex("subscription normalization: ([a-z_]+) \\(line ([0-9]+),").find(text)?.let {
         return BusinessIssue("conversion_" + it.groupValues[1], it.groupValues[2].toIntOrNull() ?: 0)

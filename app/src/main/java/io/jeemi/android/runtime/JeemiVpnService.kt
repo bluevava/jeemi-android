@@ -25,6 +25,7 @@ import io.jeemi.android.data.BundledCore
 import io.jeemi.android.domain.RuntimeState
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collectLatest
 import mobile.CoreProcess
 import mobile.Mobile
 import java.io.File
@@ -37,8 +38,8 @@ class JeemiVpnService : VpnService() {
     private var session: Job? = null
     private var command: Job? = null
     private var commandRevision = 0
-    private var shuttingDown = false
-    private var destroyed = false
+    @Volatile private var shuttingDown = false
+    @Volatile private var destroyed = false
     private var failureOnClose: String? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val statusChecks = Channel<Unit>(Channel.CONFLATED)
@@ -49,9 +50,26 @@ class JeemiVpnService : VpnService() {
         controller.service = this
     }
     internal fun requestStatusCheck() { statusChecks.trySend(Unit) }
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Removing the recent task releases its Activity, not the running VPN.
+        // Recheck this session without restarting it or reclaiming revoked VPN.
+        requestStatusCheck()
+        super.onTaskRemoved(rootIntent)
+    }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val stopping = intent?.action == "stop"
-        if (shuttingDown || (!stopping && intent?.action != "restart" && session?.isActive == true)) return START_NOT_STICKY
+        if (intent?.action == "reconfigure" && !controller.consumeAutomaticCommand(intent.getStringExtra("command"))) {
+            if (session == null && controller.request == null) stopSelfResult(startId)
+            return START_NOT_STICKY
+        }
+        val reconfiguring = intent?.action == "reconfigure" && session?.isActive == true && controller.state.value == RuntimeState.Restarting
+        if (intent?.action == "reconfigure" && !reconfiguring) {
+            // An automatic request cannot recreate a session that disappeared
+            // before its Intent was handled (revocation/termination wins).
+            closeService(startId)
+            return START_NOT_STICKY
+        }
+        if (shuttingDown || (!stopping && intent?.action != "restart" && !reconfiguring && session?.isActive == true)) return START_NOT_STICKY
         val request = if (stopping) null else controller.request
         val revision = ++commandRevision
         if (stopping) { controller.request = null; controller.state.value = RuntimeState.Stopping }
@@ -62,7 +80,7 @@ class JeemiVpnService : VpnService() {
             session?.cancelAndJoin()
             session = null
             ensureActive()
-            if (stopping || request == null || prepare(this@JeemiVpnService) != null) {
+            if (stopping || request == null || (!reconfiguring && prepare(this@JeemiVpnService) != null)) {
                 closeService(startId, if (!stopping && request != null) "vpn_permission_denied" else null)
                 return@launch
             }
@@ -90,6 +108,7 @@ class JeemiVpnService : VpnService() {
         else startForeground(1, notification)
     }
     private suspend fun runSession(request: VpnRequest, revision: Int, startId: Int) {
+        val libraryRevision = request.libraryRevision.takeIf { it >= 0 } ?: app.repository.revision.value
         var tun: ParcelFileDescriptor? = null
         var core: CoreProcess? = null
         var failed = false
@@ -100,8 +119,12 @@ class JeemiVpnService : VpnService() {
         val connectivity = getSystemService(ConnectivityManager::class.java)
         val networks = java.util.concurrent.CopyOnWriteArrayList<Network>()
         val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) { networks.addIfAbsent(network); setUnderlyingNetworks(networks.toTypedArray()) }
-            override fun onLost(network: Network) { networks.remove(network); setUnderlyingNetworks(networks.toTypedArray()) }
+            override fun onAvailable(network: Network) {
+                networks.addIfAbsent(network); setUnderlyingNetworks(networks.toTypedArray()); requestStatusCheck()
+            }
+            override fun onLost(network: Network) {
+                networks.remove(network); setUnderlyingNetworks(networks.toTypedArray()); requestStatusCheck()
+            }
         }
         var registered = false
         try {
@@ -171,6 +194,7 @@ class JeemiVpnService : VpnService() {
                 withContext(Dispatchers.Main.immediate) {
                     ensureActive()
                     if (controller.request !== request) throw CancellationException()
+                    controller.appliedRequest = request
                     controller.live.value = LiveSession(request.profileId, request.revision, geoRevision)
                 }
                 controller.refresh(client)
@@ -185,24 +209,33 @@ class JeemiVpnService : VpnService() {
                 connectivity.registerNetworkCallback(NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                     .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(), callback)
                 registered = true
+                val reloader = VpnSessionReloader(app, this@JeemiVpnService, request, client, home, cache,
+                    port, secret, geoRevision) { child.isRunning() && ownedTunnelActive(requireNotNull(tun)) }
                 coroutineScope {
+                    launch { reloader.observe(libraryRevision) }
                     // Keep liveness independent of potentially slow proxy/provider
                     // snapshots, and wake immediately when the Activity resumes.
                     launch {
                         while (isActive) {
                             ensureActive()
                             require(child.isRunning())
-                            if (!ownedTunnelActive(requireNotNull(tun)) ||
+                            if (!ownedTunnelActive(requireNotNull(tun))) throw TunnelDeactivated()
+                            if (controller.state.value != RuntimeState.Updating &&
                                 !coreTunnelEnabled(client.call("/configs", timeout = 1500))) throw TunnelDeactivated()
-                            withTimeoutOrNull(1500) { statusChecks.receive() }
+                            // Background sessions need liveness, not UI-rate polling.
+                            // Revoke/network callbacks and foreground resume still wake us.
+                            withTimeoutOrNull(if (app.uiVisible.value) 1500L else 10_000L) { statusChecks.receive() }
                         }
                     }
-                    while (isActive) {
-                        delay(1500)
-                        controller.refresh(client)
+                    app.uiVisible.collectLatest { visible ->
+                        if (visible) while (isActive) {
+                            if (controller.state.value is RuntimeState.Running) runCatching { controller.refresh(client) }
+                            delay(1500)
+                        }
                     }
                 }
             }
+        } catch (_: ReloadRecoveryFailed) { failed = true; failureCode = "reload_recovery_failed"
         } catch (_: TunnelDeactivated) {
             // System revocation / an external TUN switch is a clean stop.
         } catch (_: TimeoutCancellationException) { failed = true; failureCode = core?.tunnelError()?.ifBlank { "tunnel_not_ready" } ?: "core_timeout"

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subscription_update_interval">Auto-update interval</string>
+    <string name="subscription_update_10m">10 minutes</string>
+    <string name="subscription_update_30m">30 minutes</string>
+    <string name="subscription_update_1h">1 hour</string>
+    <string name="subscription_update_3h">3 hours</string>
+    <string name="subscription_update_12h">12 hours</string>
+    <string name="subscription_update_failed">Auto-update failed</string>
+    <string name="subscription_update_invalid">Auto-update validation failed</string>
+    <string name="subscription_changed">This subscription changed while you were editing. Reopen it before saving.</string>
+    <string name="subscription_update_purpose">Periodically download the selected URL subscription. Choose 10 minutes, 30 minutes, 1 hour, 3 hours or 12 hours; the default is 1 hour. Text-only subscriptions do not update automatically.</string>
+    <string name="subscription_update_scenarios">Check only while the Jeemi interface is visible in the foreground. Backgrounding, locking the screen or swiping it away pauses automatic updates while the running proxy continues. Timing starts from the last successful download; manual refresh resets it. An overdue subscription updates once after returning or switching to it. Changing the interval does not download or reset the success time.</string>
+    <string name="subscription_update_cautions">Updates pause while editing. Hiding the interface cancels unfinished automatic downloads; a running VPN does not keep subscription updates active in the background. Sleep, process termination or vendor restrictions can delay execution; exact timing is not guaranteed. Server recommendations do not override this setting. Download or validation failures preserve content and bindings and retry after the interval. Successful updates apply to a running proxy. A failed hot reload attempts to restore the old configuration and reports its status; correct and save again or restart explicitly. A stopped VPN is never started automatically.</string>
+</resources>

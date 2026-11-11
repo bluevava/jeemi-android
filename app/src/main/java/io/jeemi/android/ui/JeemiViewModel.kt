@@ -14,7 +14,6 @@ import io.jeemi.android.domain.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import mobile.Mobile
 import org.json.JSONObject
@@ -87,39 +86,72 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
     private var activeDownload: SubscriptionFetcher? = null
     val runtime = app.runtime.state
     val live = app.runtime.live
+    val runtimeUpdateFailed = app.runtime.updateFailed
     val diagnostics = io.jeemi.android.runtime.Diagnostics(app.runtime, viewModelScope, app)
     private var tests: Job? = null
     private val singleTests = mutableMapOf<String, Job>()
     private val icons = SubscriptionIcons()
     internal val selectorIcons get() = app.selectorIcons
-    private val mutations = Mutex()
+    private val mutations = app.repository.mutations
+    private var libraryRevision = -1L
+    internal val subscriptionUpdateErrors = app.subscriptionAutoUpdater.errors
+    internal fun pauseSubscriptionUpdates() = app.subscriptionAutoUpdater.pause()
     private var vpnActionRevision = 0
 
     init {
         viewModelScope.launch {
+            mutations.withLock {
             try {
                 val loaded = withContext(Dispatchers.IO) {
                     val stored = synchronized(app.repository) {
                         val previous = app.repository.load()
-                        withBundledAppRouting(previous, app, app.engine).also {
+                        withBundledAppRouting(withUpgradedRuntimeDefaults(previous, app), app, app.engine).also {
+                            ensureActive()
                             if (it != previous) app.repository.save(it)
                         }
                     }
-                    val normalized = stored.copy(preferences = app.engine.normalizePreferences(stored.preferences),
-                        subscriptions = stored.subscriptions.map { runCatching { app.engine.reparse(it) }.getOrDefault(it) })
-                    val library = normalized.copy(subscriptions = normalized.subscriptions.map { item ->
-                        item.copy(ruleProviderCount = runCatching { app.engine.project(item, normalized.preferences, normalized.resources, normalized.chainLibrary).providers.size }
-                            .getOrDefault(item.ruleProviderCount))
-                    })
-                    val candidate = runCatching { project(library) }
-                    AppState(library, loaded = true, structure = candidate.getOrNull()?.structure ?: SubscriptionStructure(),
-                        catalog = app.engine.catalog(), candidate = candidate.getOrNull(), projectionFailed = candidate.isFailure,
-                        geo = app.geodata.assets(), chains = chainState(library.chainLibrary), resourceGraph = runCatching { resourceGraph(library) }.getOrDefault(ResourceGraph(available = false)))
+                    restoredState(stored)
                 }
                 mutableState.value = loaded
+                libraryRevision = app.repository.revision.value
+                app.subscriptionAutoUpdater.reconcile(loaded.library)
+                app.subscriptionAutoUpdater.initialized()
             } catch (cancelled: CancellationException) { throw cancelled
             } catch (_: Exception) { mutableState.value = AppState(error = AppError.LOAD) }
+            }
         }
+        viewModelScope.launch {
+            app.repository.revision.collect {
+                try { mutations.withLock { refreshLibraryIfChanged() } }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { mutableState.value = mutableState.value.copy(error = AppError.LOAD) }
+            }
+        }
+    }
+
+    private fun restoredState(stored: Library): AppState {
+        val normalized = stored.copy(preferences = app.engine.normalizePreferences(stored.preferences),
+            subscriptions = stored.subscriptions.map { runCatching { app.engine.reparse(it) }.getOrDefault(it) })
+        val library = normalized.copy(subscriptions = normalized.subscriptions.map { item ->
+            item.copy(ruleProviderCount = runCatching { app.engine.project(item, normalized.preferences, normalized.resources, normalized.chainLibrary).providers.size }
+                .getOrDefault(item.ruleProviderCount))
+        })
+        val candidate = runCatching { project(library) }
+        return AppState(library, loaded = true, structure = candidate.getOrNull()?.structure ?: SubscriptionStructure(),
+            catalog = app.engine.catalog(), candidate = candidate.getOrNull(), projectionFailed = candidate.isFailure,
+            geo = app.geodata.assets(), chains = chainState(library.chainLibrary),
+            resourceGraph = runCatching { resourceGraph(library) }.getOrDefault(ResourceGraph(available = false)))
+    }
+
+    // Caller holds the application-wide mutation lock. Keep open editor drafts intact.
+    private suspend fun refreshLibraryIfChanged() {
+        if (!mutableState.value.loaded || libraryRevision == app.repository.revision.value) return
+        val loaded = withContext(Dispatchers.IO) { restoredState(app.repository.load()) }
+        mutableState.value = mutableState.value.copy(library = loaded.library, structure = loaded.structure,
+            candidate = loaded.candidate, projectionFailed = loaded.projectionFailed, geo = loaded.geo,
+            chains = loaded.chains, resourceGraph = loaded.resourceGraph, resourceCheck = null,
+            saveRevision = mutableState.value.saveRevision + 1)
+        libraryRevision = app.repository.revision.value
     }
 
     private fun project(library: Library) = library.selected?.let { app.engine.project(it, library.preferences, library.resources, library.chainLibrary) }
@@ -138,6 +170,7 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
                 logLevel = JSONObject(current.preferences.runtimeJson).getString("logLevel"), selections = selected.selections,
                 defaults = candidate.structure.groups.associate { it.name to it.defaultSelected },
                 tunStack = current.preferences.tunStack,
+                libraryRevision = app.repository.revision.value,
                 externalUIVersion = current.preferences.externalUIVersion.takeIf { current.preferences.externalUIEnabled }.orEmpty())
             withContext(Dispatchers.Main) {
                 // Stopping also invalidates a request still being prepared off the UI thread.
@@ -305,6 +338,11 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
         })
     }
 
+    fun openSavedResource(id: String) {
+        val current = mutableState.value
+        if (current.busy || current.resourceDownloading) return
+        current.library.resources.firstOrNull { it.id == id }?.let(::openResource)
+    }
     fun openResource(resource: LocalResource) {
         cancelResourceNetwork()
         editingOriginal = mutableState.value.library.resources.firstOrNull { it.id == resource.id }
@@ -391,6 +429,18 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
                 require(JSONObject(previous.content).getString("kind") == JSONObject(draft.content).getString("kind"))
             val prepared = app.engine.prepareTyped(draft)
             old.copy(resources = old.resources.replacing(prepared))
+        }
+    }
+    fun createBuiltinRules(kind: String, labels: String) {
+        if (mutableState.value.busy) return
+        var createdID = ""
+        commit(AppError.RESOURCE, onSuccess = {
+            mutableState.value.library.resources.firstOrNull { it.id == createdID }?.let(::openResource)
+        }) { old ->
+            val result = JSONObject(Mobile.prepareBuiltinRules(kind, old.resources.toJson().toString(), labels))
+            createdID = result.getString("configId")
+            val resources = result.getJSONArray("resources")
+            old.copy(resources = old.resources + List(resources.length()) { resourceFromJson(resources.getJSONObject(it)) })
         }
     }
     fun addField(field: ConfigField, value: String, enabled: Boolean = true,
@@ -495,6 +545,7 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
                 val resolved = resolveScript(draft, input, request)
                 // Network acquisition stays outside the save lock; inspection is detached.
                 mutations.withLock {
+                    refreshLibraryIfChanged()
                     check(revision == mutableState.value.saveRevision && generation == resourceGeneration)
                     withContext(Dispatchers.IO) {
                         val prepared = app.engine.prepareTyped(resolved.copy(name = resolved.name.ifBlank { app.getString(resolved.kind.label) }))
@@ -584,25 +635,31 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
 
     private data class ImportedContent(val text: String, val suggestedName: String = "", val usage: Map<String, Long> = emptyMap())
     fun importText(name: String, text: String, description: String = "", url: String = "", id: String? = null,
-        icon: String? = null, handler: String? = null, overrideHandler: Boolean = false) =
-        importSubscription(name, description, url, id, icon, handler, overrideHandler) { ImportedContent(text) }
+        icon: String? = null, handler: String? = null, overrideHandler: Boolean = false,
+        autoUpdateIntervalMinutes: Int? = null, expected: Subscription? = null) =
+        importSubscription(name, description, url, id, icon, handler, overrideHandler,
+            autoUpdateIntervalMinutes = autoUpdateIntervalMinutes, expected = expected) { ImportedContent(text) }
     fun importFile(name: String, uri: Uri) = importSubscription(name, "", "", null) { ImportedContent(readFile(uri)) }
-    fun importUrl(name: String, url: String, description: String = "", icon: String = "", handler: String? = null) {
+    fun importUrl(name: String, url: String, description: String = "", icon: String = "", handler: String? = null,
+        autoUpdateIntervalMinutes: Int = 60) {
         val fetcher = app.subscriptionFetcher()
         activeDownload = fetcher
         mutableState.value = mutableState.value.copy(downloadBusy = true)
-        importSubscription(name, description, url, null, icon, handler, true, valid = { !fetcher.isCancelled }) {
+        importSubscription(name, description, url, null, icon, handler, true,
+            autoUpdateIntervalMinutes = autoUpdateIntervalMinutes, valid = { !fetcher.isCancelled }) {
             ImportedContent(fetcher.fetch(url), fetcher.suggestedName, fetcher.usage)
         }
     }
     fun cancelDownload() { activeDownload?.cancel(); icons.cancel() }
     fun refresh(id: String) {
-        val item = mutableState.value.library.subscriptions.firstOrNull { it.id == id } ?: return
         val fetcher = app.subscriptionFetcher()
         activeDownload = fetcher
         mutableState.value = mutableState.value.copy(downloadBusy = true)
-        importSubscription(item.name, item.description, item.sourceUrl, id, valid = { !fetcher.isCancelled }) {
-            ImportedContent(fetcher.fetch(item.sourceUrl), fetcher.suggestedName, fetcher.usage)
+        commit(AppError.IMPORT, valid = { !fetcher.isCancelled }) { old ->
+            val item = old.subscriptions.first { it.id == id }
+            val body = fetcher.fetch(item.sourceUrl)
+            val refreshed = item.withFetchedContent(app.engine.normalize(item.name, body), fetcher.usage, System.currentTimeMillis())
+            old.copy(subscriptions = old.subscriptions.map { if (it.id == id) refreshed else it })
         }
     }
     private fun readFile(uri: Uri, limit: Int = MAX_IMPORT_BYTES): String = app.contentResolver.openInputStream(uri)?.use {
@@ -611,12 +668,15 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun importSubscription(name: String, description: String, url: String, id: String?,
         icon: String? = null, handler: String? = null, overrideHandler: Boolean = false,
+        autoUpdateIntervalMinutes: Int? = null, expected: Subscription? = null,
         valid: () -> Boolean = { true }, read: () -> ImportedContent) =
         commit(AppError.IMPORT, imported = true, valid = valid) { old ->
             require(name.length <= 80 && description.length <= 500)
             if (url.isNotBlank()) requireSubscriptionUrl(url)
             require(old.subscriptions.size < 50 || id != null)
             val previous = id?.let { value -> old.subscriptions.first { it.id == value } }
+            require(expected == null || previous == expected) { "subscription_changed" }
+            val interval = subscriptionUpdateInterval(url, autoUpdateIntervalMinutes ?: previous?.autoUpdateIntervalMinutes?.takeIf { it > 0 })
             val content = read()
             val raw = content.text
             require(raw.toByteArray(Charsets.UTF_8).size <= MAX_IMPORT_BYTES)
@@ -632,6 +692,7 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
             if (remoteIcon) requireSubscriptionUrl(chosenIcon)
             else require(chosenIcon.length <= 24 && chosenIcon.none { it.isISOControl() })
             val image = when {
+                previous != null && chosenIcon == previous.icon -> null
                 remoteIcon -> icons.load(chosenIcon)
                 chosenIcon.isBlank() && url.isNotBlank() -> icons.detect(url)
                 else -> null
@@ -639,7 +700,9 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
             if (chosenIcon.isBlank() && image != null) chosenIcon = image.url
             check(activeDownload?.isCancelled != true)
             val item = normalized.copy(id = previous?.id ?: UUID.randomUUID().toString(),
-                description = description, sourceUrl = url.trim(), updatedAt = System.currentTimeMillis(),
+                description = description, sourceUrl = url.trim(),
+                updatedAt = if (previous?.original == raw && previous.sourceUrl == url.trim()) previous.updatedAt else System.currentTimeMillis(),
+                autoUpdateIntervalMinutes = interval,
                 handlerId = if (overrideHandler) handler else previous?.handlerId, resourceIds = previous?.resourceIds ?: emptyList(),
                 icon = chosenIcon, iconImage = image?.image ?: if (chosenIcon == previous?.icon) previous.iconImage else "",
                 selections = previous?.selections ?: emptyMap(),
@@ -661,6 +724,7 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
                 if (!mutableState.value.loaded) return@withLock
                 mutableState.value = mutableState.value.copy(busy = true, error = null, businessIssue = null)
                 try {
+                    refreshLibraryIfChanged()
                     val previous = mutableState.value.library
                     val (library, candidate) = withContext(Dispatchers.IO) {
                         if (!valid()) throw CancellationException()
@@ -681,7 +745,7 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
                                 subscription != previous.subscriptions.firstOrNull { it.id == subscription.id }) {
                                 val result = app.engine.project(subscription, next.preferences, next.resources, next.chainLibrary)
                                 val oldSubscription = previous.subscriptions.firstOrNull { it.id == subscription.id }
-                                if (resourceChanges || oldSubscription?.handlerId != subscription.handlerId ||
+                                if (resourceChanges || oldSubscription?.original != subscription.original || oldSubscription?.handlerId != subscription.handlerId ||
                                     oldSubscription?.resourceIds.orEmpty() != subscription.resourceIds ||
                                     (subscription.chainGroupIds.isNotEmpty() && (compositionChanged ||
                                         subscription.chainGroupIds.any(chainChanges::contains) || oldSubscription?.let {
@@ -705,6 +769,8 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
                     // if a URL operation is cancelled at this exact boundary.
                     withContext(NonCancellable) {
                         withContext(Dispatchers.IO) { app.repository.save(library) }
+                        libraryRevision = app.repository.revision.value
+                        app.subscriptionAutoUpdater.reconcile(library)
                         mutableState.value = mutableState.value.copy(library = library, structure = candidate?.structure ?: SubscriptionStructure(),
                             candidate = candidate, projectionFailed = library.selected != null && candidate == null,
                             busy = false, downloadBusy = false, chains = chains, resourceGraph = graph, resourceCheck = null,
@@ -788,6 +854,7 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
                 if (!mutableState.value.loaded) return@withLock
                 mutableState.value = mutableState.value.copy(busy = true, error = null, businessIssue = null)
                 try {
+                    refreshLibraryIfChanged()
                     withContext(Dispatchers.IO) { action() }
                     mutableState.value = mutableState.value.copy(busy = false)
                     onSuccess()
@@ -967,6 +1034,7 @@ class JeemiViewModel(application: Application) : AndroidViewModel(application) {
                         request.put("contents", body)
                         if (previewOnly) {
                             mutations.withLock {
+                                refreshLibraryIfChanged()
                                 withContext(Dispatchers.IO) { previewChainMutation(mutableState.value.library, request) }
                             }
                             continue

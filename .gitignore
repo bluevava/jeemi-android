@@ -13,6 +13,10 @@ keystore.properties
 github-secrets.json
 /private/
 /temp/
+# JVM crash reports and optional heap dumps, including fallback locations.
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
 /Bin/
 **/build/
 __pycache__/

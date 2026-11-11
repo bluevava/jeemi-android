@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="selector_auto_companion">配套自动选择器</string>
+    <string name="runtime_updating">正在应用配置</string>
+    <string name="configuration_pending">配置待应用</string>
+    <string name="runtime_update_failed">更新失败 · 仍使用原配置</string>
+</resources>

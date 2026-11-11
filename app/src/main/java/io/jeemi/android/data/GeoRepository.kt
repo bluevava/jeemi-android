@@ -28,9 +28,13 @@ class GeoRepository(private val context: Context) {
     fun assets(): List<GeoAsset> {
         if (!selection.baseFile.exists() && !File(selection.baseFile.path + ".bak").exists()) return bundled()
         val array = JSONArray(selection.openRead().use { it.readBounded(64 * 1024).toString(Charsets.UTF_8) })
+        val currentBundled = bundled().associateBy { it.kind }
         return List(array.length()) { array.getJSONObject(it).let { item ->
-            GeoAsset(item.getString("kind"), canonical(item.getString("kind")), item.getString("sha256"),
+            val stored = GeoAsset(item.getString("kind"), canonical(item.getString("kind")), item.getString("sha256"),
                 item.getLong("bytes"), item.getString("source"), item.getString("date"))
+            // Bundled bytes come from this APK, including after an upgrade.
+            // User-imported/downloaded blobs retain their independent selection.
+            if (stored.source == "bundled") currentBundled.getValue(stored.kind) else stored
         } }
     }
     fun restore() = save(bundled())

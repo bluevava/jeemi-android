@@ -1,7 +1,8 @@
 {
-  "tag": "v1.19.32",
-  "url": "https://codeload.github.com/MetaCubeX/mihomo/tar.gz/refs/tags/v1.19.32",
-  "archive": "source/mihomo-v1.19.32.tar.gz",
-  "directory": "mihomo-1.19.32",
-  "sha256": "ab130b7fab3893d01aa44c0d39be34a26da716c1d36832fbac9fa054a1d862a0"
+  "tag": "v1.19.33",
+  "commit": "3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8",
+  "url": "https://codeload.github.com/MetaCubeX/mihomo/tar.gz/refs/tags/v1.19.33",
+  "archive": "source/mihomo-v1.19.33.tar.gz",
+  "directory": "mihomo-1.19.33",
+  "sha256": "e7c596b37ff27ec487d19b1920f73e0c97a78067ea35766530ee9659ade72711"
 }

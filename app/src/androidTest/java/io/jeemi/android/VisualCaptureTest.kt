@@ -74,7 +74,7 @@ class VisualCaptureTest {
         compose.onNodeWithContentDescription(text(R.string.search_nodes)).performClick()
         capture("search-zh")
         compose.onNodeWithContentDescription(text(R.string.search_nodes)).performClick()
-        click(R.string.configuration); capture("configuration-zh"); click(R.string.new_resource)
+        click(R.string.configuration); capture("configuration-zh"); compose.onNodeWithTag("resource-create").performClick()
         compose.onNode(hasText(text(R.string.name)) and hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("Local config")
         compose.onNodeWithTag("field-tree-search").performScrollTo().performTextInput("/sniffer/enable")
         compose.onNodeWithTag("field-name-/sniffer/enable").performScrollTo().performClick()

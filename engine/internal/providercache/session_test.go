@@ -3,6 +3,7 @@ package providercache
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,24 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+func TestRepeatedReloadsKeepRegistryBoundedWithoutChangingStagedConfig(t *testing.T) {
+	session, name := sessionFixture(t, Store{Root: t.TempDir(), Path: "cache"}, testConfiguration)
+	for i := 0; len(session.keys) < 1024; i++ {
+		session.keys[fmt.Sprintf("%064x", i)] = true
+	}
+	input := strings.ReplaceAll(testConfiguration, "Google", "Changed")
+	if err := os.WriteFile(name, []byte(input), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if session.Prepare(configurationName) == nil {
+		t.Fatal("unbounded provider identities")
+	}
+	actual, _ := os.ReadFile(name)
+	if string(actual) != input || len(session.keys) != 1024 {
+		t.Fatal("failed prepare mutated session")
+	}
+}
 
 const testConfiguration = `external-controller: 127.0.0.1:9090
 secret: private-session-secret-must-not-be-cached

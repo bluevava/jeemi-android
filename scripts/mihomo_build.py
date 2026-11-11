@@ -83,8 +83,12 @@ def build(update_lock=False):
     # Both architectures must compile and verify before replacing either resource.
     for item, output, digest, size in outputs:
         item["sha256"], item["bytes"] = digest, size
-        mihomo.core_path(item).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(output, mihomo.core_path(item))
+        destination = mihomo.core_path(item)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        # Reproducibility checks should not rewrite unchanged APK inputs (which
+        # can still be mapped by Windows tools), or invalidate incremental builds.
+        if not destination.exists() or hashlib.sha256(destination.read_bytes()).hexdigest() != digest:
+            shutil.copyfile(output, destination)
     if update_lock:
         for field in ("sourceLock", "patch"):
             spec[field + "Sha256"] = hashlib.sha256((RES / spec[field]).read_bytes()).hexdigest()

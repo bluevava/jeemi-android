@@ -8,6 +8,8 @@ import io.jeemi.android.ui.components.HelpContent
 
 internal val ConnectionHelp = HelpContent(R.string.status_control, R.string.help_connection_purpose, R.string.help_connection_scenarios, R.string.help_connection_cautions)
 internal val IconHelp = HelpContent(R.string.subscription_icon, R.string.icon_purpose, R.string.icon_scenarios, R.string.icon_cautions)
+internal val SubscriptionUpdateHelp = HelpContent(R.string.subscription_update_interval,
+    R.string.subscription_update_purpose, R.string.subscription_update_scenarios, R.string.subscription_update_cautions)
 internal val ScanHelp = HelpContent(R.string.scan_subscription_qr, R.string.scan_purpose, R.string.scan_scenarios, R.string.scan_cautions)
 internal val PermissionsHelp = HelpContent(R.string.permissions, R.string.permissions_purpose, R.string.permissions_scenarios, R.string.permissions_cautions)
 internal val CoreHelp = HelpContent(R.string.core_management, R.string.help_core_purpose, R.string.help_core_scenarios, R.string.help_core_cautions)

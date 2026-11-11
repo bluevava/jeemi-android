@@ -8,7 +8,7 @@
     <string name="field_owner_home">由主页运行参数或 GEO 设置管理。可选资源遵循主页的注入开关和合并策略，关闭注入时可能保留来源值；这里始终只读。</string>
     <string name="field_owner_android">由 Android VPN 会话或外部 UI 设置管理，部分桌面字段在 Android 上不支持。这里仅展示结构，不显示实际会话值、密钥，也不增加本地覆盖入口。</string>
     <string name="field_owner_routing">由本地规则方案、策略组和规则集管理，请在对应资源中修改。主页局域网绕过规则在其后注入，仍位于 rules 最开头。</string>
-    <string name="field_tree_edit_cautions">字段树开关控制是否注入，与布尔值 false 分开。应用字段值会保留当前注入状态，未配置字段仍需手动开启；清除会移除该字段草稿。保存整个资源才会提交，正在运行的 VPN 需重启生效。</string>
+    <string name="field_tree_edit_cautions">字段树开关控制是否注入，与布尔值 false 分开。应用字段值会保留当前注入状态，未配置字段仍需手动开启；清除会移除该字段草稿。保存整个资源才会提交，正在运行的 VPN 会自动应用。</string>
     <string name="field_tree_branch_cautions">点击父节点名称展开。父开关只批量启停已配置且可编辑的子字段，包括被搜索隐藏的子字段；部分启用以横线标识。尚无已配置子字段时不能批量开启。关闭会保留值及合并策略。</string>
     <string name="field_tree_dns_title">DNS 字段</string>
     <string name="field_tree_dns_purpose">通过 dns 下的子字段配置解析服务器、缓存、备用解析和解析策略。</string>

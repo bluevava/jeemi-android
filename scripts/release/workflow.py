@@ -14,7 +14,7 @@ import urllib.request
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from scripts.release.common import ARCHITECTURES, PUBLIC_REPOSITORY, ROOT, apk_name, ci_metadata, digest, fingerprint, github_outputs, notes_for, version
+from scripts.release.common import ARCHITECTURES, PUBLIC_REPOSITORY, ROOT, apk_name, ci_metadata, digest, download_table, fingerprint, github_outputs, notes_for, version
 from scripts.release.signing import verify_package, verify_signature
 
 
@@ -165,7 +165,7 @@ def publish(directory: Path) -> None:
     tag, commit, metadata = context()
     certificate = os.environ.get("ANDROID_SIGNING_CERT_SHA256", "")
     validate_bundle(directory, metadata, commit, certificate)
-    notes = notes_for(ROOT, metadata["version"])
+    notes = "## 安卓安装包下载\n\n" + download_table(tag) + "\n" + notes_for(ROOT, metadata["version"])
     api = GitHub()
     if not check_state(api, tag, commit):
         return
@@ -207,14 +207,19 @@ def publish(directory: Path) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["metadata", "check", "publish"])
+    parser.add_argument("command", choices=["metadata", "check", "publish", "downloads"])
     parser.add_argument("--assets", type=Path, default=Path("release-assets"))
+    parser.add_argument("--tag", help="Published version to use when printing the download table")
     arguments = parser.parse_args()
     try:
         if arguments.command == "metadata":
             ci_metadata()
         elif arguments.command == "check":
             prepare()
+        elif arguments.command == "downloads":
+            if not arguments.tag:
+                raise ValueError("downloads requires --tag vX.Y.Z; use an already published version for README links.")
+            print(download_table(arguments.tag), end="")
         else:
             publish(arguments.assets)
     except (ValueError, OSError, KeyError, subprocess.SubprocessError) as error:

@@ -1,0 +1,7 @@
+# Bundled Android rule snapshots
+
+The 15 `.list` files, `sources.json` and `LICENSE.txt` are unchanged copies from desktop Jeemi `6dd9d314c4377311ab4786801c865833218d8ff7`, originally from MetaCubeX/meta-rules-dat `1fc5de325d54d3b77d6b86a1db900c5e48ae1003`. The desktop snapshot was retrieved on 2026-11-06 and extended on 2026-11-11. `sources.json` records upstream paths, sizes and SHA-256 values; Go tests verify every list. GPL-3.0 terms are preserved here and in the APK notices. No online update occurs when creating a template.
+
+Android preserves the business-domain ordering, the independent Instagram rules, combined Netflix classical domain/IP rules, and YouTube exclusions from Google. General rules use the installed CN GEO databases. Application rules use the Jeemi-authored `process-direct-android.yaml`, which contains editable exact package names for common Android apps; it is a small starting list, not a claim about every installed application. No desktop process path, Windows update exception or browser default is included.
+
+Android uses four manual selectors and includes original subscription providers without prefetching them. Desktop automatic selector pairs and the static Hong Kong exclusion are not migrated. Each explicit creation remaps the complete graph to fresh IDs and collision-free names, rather than reusing a previous copy. See `docs/builtin-rules.md` and `docs/builtin-rules-sources.json` in the Android development repository for migration and verification details.

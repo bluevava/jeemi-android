@@ -151,6 +151,7 @@ private fun RowScope.SubscriptionActions(subscription: Subscription?, busy: Bool
 
 @Composable
 internal fun SubscriptionEntry(subscription: Subscription, chosen: Boolean, busy: Boolean, now: Long,
+    updateError: SubscriptionUpdateError? = null,
     select: () -> Unit, refresh: () -> Unit, bindings: @Composable () -> Unit, menu: @Composable () -> Unit) {
     Card(Modifier.fillMaxWidth().semantics { selected = chosen }.clickable(enabled = !busy, role = Role.Button, onClick = select),
         shape = JeemiShapes.Component, colors = CardDefaults.cardColors(containerColor =
@@ -161,8 +162,11 @@ internal fun SubscriptionEntry(subscription: Subscription, chosen: Boolean, busy
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(subscription.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(relativeTime(subscription.updatedAt, now), style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    val updateStatus = if (updateError == null) "" else " · " + stringResource(
+                        if (updateError == SubscriptionUpdateError.DOWNLOAD) R.string.subscription_update_failed else R.string.subscription_update_invalid)
+                    Text(relativeTime(subscription.updatedAt, now) + updateStatus, style = MaterialTheme.typography.labelSmall,
+                        color = if (updateError == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 IconButton(onClick = refresh, enabled = !busy && subscription.sourceUrl.isNotBlank()) {
                     Icon(Icons.Outlined.Refresh, stringResource(R.string.refresh_subscription, subscription.name), Modifier.size(20.dp))

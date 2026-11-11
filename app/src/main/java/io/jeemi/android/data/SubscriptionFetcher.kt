@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 
 internal typealias SubscriptionRoute = (URL) -> HttpURLConnection
 
-/** Explicit user initiated requests only. No cookies, logs or background refresh. */
+/** Bounded subscription acquisition shared by manual and scheduled updates. No cookies or logs. */
 class SubscriptionFetcher internal constructor(
     private val openConnection: SubscriptionRoute = { it.openConnection() as HttpURLConnection },
     private val directFallback: () -> SubscriptionRoute? = { null }

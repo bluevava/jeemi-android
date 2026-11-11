@@ -59,6 +59,7 @@ data class Subscription(
     val normalizationReport: String = "",
     val chainGroupIds: List<String> = emptyList(),
     val chainRevision: Int = 0,
+    val autoUpdateIntervalMinutes: Int? = null,
 )
 
 data class Preferences(
@@ -116,10 +117,11 @@ sealed interface RuntimeState {
     data object Stopped : RuntimeState
     data object Starting : RuntimeState
     data object Restarting : RuntimeState
+    data object Updating : RuntimeState
     data object Stopping : RuntimeState
     data class Running(val activeRevision: String) : RuntimeState
     data class Failed(val reason: String) : RuntimeState
 }
 
 val RuntimeState.transitioning: Boolean get() = this == RuntimeState.Starting ||
-    this == RuntimeState.Restarting || this == RuntimeState.Stopping
+    this == RuntimeState.Restarting || this == RuntimeState.Updating || this == RuntimeState.Stopping

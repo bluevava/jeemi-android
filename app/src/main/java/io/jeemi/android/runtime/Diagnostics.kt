@@ -83,8 +83,8 @@ internal fun redactLog(message: String): String = message
     .replace(Regex("(https?://)[^\\s/@]+:[^\\s/@]+@"), "$1***@")
     .replace(Regex("(?i)([?&](?:token|key|password|secret|auth)\\s*=)[^&\\s]+"), "$1***")
 
-/** Page-owned observations. Runtime state always refers to the actual session,
- * even if the user has selected a different subscription for the next start. */
+/** Page-owned observations bind to the actual session, including while a newly
+ * selected subscription is still being validated or applied. */
 class Diagnostics(private val runtime: VpnController, private val scope: CoroutineScope, context: android.content.Context) {
     private val preferences = context.getSharedPreferences("dns-diagnostics", android.content.Context.MODE_PRIVATE)
     private val packages = context.packageManager
@@ -146,6 +146,7 @@ class Diagnostics(private val runtime: VpnController, private val scope: Corouti
         connections.update { it.copy(busy = true, error = false) }
         scope.launch {
             try { withContext(Dispatchers.IO) {
+                runtime.withConfiguration {
                 val client = requireNotNull(runtime.api)
                 require(runtime.state.value is RuntimeState.Running && runtime.live.value?.sessionId == sessionId)
                 val closed = ids.toHashSet()
@@ -161,6 +162,7 @@ class Diagnostics(private val runtime: VpnController, private val scope: Corouti
                         if (it.sessionId == sessionId) it.copy(rows = markClosedConnections(it.rows, closed),
                             activeCount = (it.activeCount - it.rows.count { row -> !row.ended && row.id in closed }).coerceAtLeast(0)) else it
                     }
+                }
                 }
             } } catch (cancelled: CancellationException) { throw cancelled
             } catch (_: Exception) { connections.update { if (it.sessionId == sessionId) it.copy(error = true) else it }

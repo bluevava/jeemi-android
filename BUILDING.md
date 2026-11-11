@@ -13,11 +13,17 @@ python scripts/dev.py build-debug
 python scripts/dev.py build-release
 ```
 
-`check` 执行维护脚本测试、双语/UI 约束、Go 与 Kotlin 测试、Android Lint。构建校验两种 ABI、核心和 GEO 哈希、ELF 与 APK 16 KB 对齐。检查通过不等于实机兼容性认证；这些命令不会安装应用或启动 VPN。
+`check` 执行维护脚本测试、双语/UI 约束、Go 与 Kotlin 测试、Android Lint。构建校验两种 ABI、核心和 GEO 哈希、全部打包许可、Go 业务库中内置规则的原始内容、ELF 与 APK 16 KB 对齐。检查通过不等于实机兼容性认证；这些命令不会安装应用或启动 VPN。
 
 Debug 和未签名 Release 输出至 `Bin/Jeemi-Android/Android-{arm64,amd64}/{debug,release}/`，每包附 SHA-256。`build-release` 是 R8 构建，随后才执行签名。不要并发运行共享 `engine/build` 的构建任务。
 
+默认以较低并发构建：Gradle 单工作进程、关闭项目并行、最大堆 2 GiB，Kotlin 在同一进程编译，命令行构建结束后释放 Gradle 进程；单元测试串行，初始堆 64 MiB、最大堆 512 MiB。Go 默认按 `-p=1` / `GOMAXPROCS=2` 构建，保留显式环境设置。不要同时运行多个检查、核心或 APK 构建；限制构建并发不能保证其他应用占满内存时仍能成功。
+
+维护入口和两个 Gradle Wrapper 在 JVM 启动前将崩溃报告定向到 `temp/jvm-crashes/hs_err_pid%p.log`，子 JVM 继承；IDE 单元测试同样配置该目录。堆转储若由调用者主动开启，也写到此处。环境修改仅在构建进程内生效，IDE 自身及绕过入口启动的 JVM 不在范围内；重新生成 Wrapper 时保留定制段。temp 和兜底的 JVM 崩溃日志、堆转储已加入 Git 忽略。
+
 `core-verify`、`geo-verify` 校验锁定资源；`core-build` 从源码归档及补丁重建核心，`geo-fetch` 恢复固定 GEO。普通构建仅校验现有资源。被资源清单引用的 JSON 按原始字节保留，不能批量转换换行后绕过哈希校验。
+
+每个新 Release 的说明会自动添加对应标签的 Markdown 下载表格与 Shields.io 徽章，直达两种架构的 APK 和校验文件。`python scripts/dev.py release-workflow downloads --tag vX.Y.Z` 可离线生成同款表格；README 下载区只填写已经发布的版本。APK 文件名继续包含版本号，不通过增加重复 APK 资产提供别名。
 
 ## 签名 Secrets
 

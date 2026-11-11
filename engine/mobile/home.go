@@ -14,6 +14,13 @@ func RuntimeDefaults() string {
 	b, _ := json.Marshal(runtimeconfig.DefaultPreferences())
 	return string(b)
 }
+
+// UpgradeRuntimeDefaults checks the exact persisted values before normalization.
+// The caller validates the candidate and atomically saves the migration marker.
+func UpgradeRuntimeDefaults(raw string) (string, error) {
+	return runtimeconfig.UpgradeDefaultFakeIPFilter(raw)
+}
+
 func NormalizeRuntimePreferences(raw string) (string, error) {
 	var p runtimeconfig.Preferences
 	if len(raw) > 256<<10 || json.Unmarshal([]byte(raw), &p) != nil {

@@ -24,6 +24,14 @@ func (s *ProviderCacheSession) Prepare() error {
 	}
 	return nil
 }
+
+// Hot reloads keep the current generation and every live provider cache intact.
+func (s *ProviderCacheSession) PrepareReload() error {
+	if s.session.Prepare("generations/reload.yaml") != nil {
+		return fmt.Errorf("provider_cache_prepare_failed")
+	}
+	return nil
+}
 func (s *ProviderCacheSession) Save() {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()

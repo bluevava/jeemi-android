@@ -1,32 +1,32 @@
 {
   "schemaVersion": 1,
-  "snapshot": "2026-09-09T00:26:41Z",
+  "snapshot": "2026-11-11T02:03:50Z",
   "repository": "https://github.com/MetaCubeX/meta-rules-dat",
-  "releaseId": 385144153,
+  "releaseId": 441152447,
   "upstreamTag": "latest",
   "files": [
     {
       "kind": "geoip-mmdb",
       "file": "geoip.metadb",
-      "bytes": 8565823,
-      "sha256": "ee2ee08ce3aaf1ba84dd60e37cf1e62a3f5c2690ad4c0d2c1fd377495bdc9525",
-      "assetUrl": "https://api.github.com/repos/MetaCubeX/meta-rules-dat/releases/assets/551623656",
+      "bytes": 8406197,
+      "sha256": "1772d37f4f541f86de198ba9e51131dcb223cf4dec7a2a967d636f827ff150d6",
+      "assetUrl": "https://api.github.com/repos/MetaCubeX/meta-rules-dat/releases/assets/733753151",
       "url": "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb"
     },
     {
       "kind": "geosite",
       "file": "GeoSite.dat",
-      "bytes": 4244077,
-      "sha256": "01605ebe6f73896e82d1436e86ce375790c43a5ee4c738179845c1b834ba00e4",
-      "assetUrl": "https://api.github.com/repos/MetaCubeX/meta-rules-dat/releases/assets/551623684",
+      "bytes": 4356285,
+      "sha256": "da712b401ea6f4fdb45983e7a3458332decb85c244307b443df3e11feb4af366",
+      "assetUrl": "https://api.github.com/repos/MetaCubeX/meta-rules-dat/releases/assets/733753182",
       "url": "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat"
     },
     {
       "kind": "asn",
       "file": "ASN.mmdb",
-      "bytes": 12106294,
-      "sha256": "37279508b91bb26fe6043897490fe2ba02d95a7521a8263e70e566239355b479",
-      "assetUrl": "https://api.github.com/repos/MetaCubeX/meta-rules-dat/releases/assets/551623584",
+      "bytes": 9054248,
+      "sha256": "3f729dfdbca46d6bc83fe084e15e335cef702b46f9d9afb8feaede36180959f4",
+      "assetUrl": "https://api.github.com/repos/MetaCubeX/meta-rules-dat/releases/assets/733753043",
       "url": "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"
     }
   ]

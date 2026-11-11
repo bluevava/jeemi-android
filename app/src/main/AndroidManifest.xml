@@ -45,6 +45,7 @@
             android:name=".runtime.JeemiVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:exported="false"
+            android:stopWithTask="false"
             android:foregroundServiceType="systemExempted"
             tools:ignore="ForegroundServicePermission">
             <!-- Approved VPN apps qualify for systemExempted without alarm permissions:

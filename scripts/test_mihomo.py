@@ -137,6 +137,68 @@ class AdaptedCoreTest(unittest.TestCase):
                         with self.assertRaisesRegex(RuntimeError, "pinned core source or patch notice"):
                             dev.verify_apk(apk, "x86_64")
 
+    def test_identical_core_rebuild_does_not_write_bundled_inputs(self):
+        import mihomo_build
+        content = {}
+        timestamps = {}
+        for item in self.spec["cores"]:
+            item["architecture"] = "arm64" if item["abi"] == "arm64-v8a" else "amd64"
+            path = mihomo.core_path(item)
+            content[item["abi"]] = path.read_bytes()
+            timestamps[item["abi"]] = path.stat().st_mtime_ns
+        self.save_manifest()
+
+        def simulate_go(arguments, **kwargs):
+            if arguments == ["go", "version"]:
+                return SimpleNamespace(stdout=f"go version go{dev.SPEC['go']} fixture/fixture")
+            self.assertEqual(arguments[:2], ["go", "build"])
+            output = Path(arguments[arguments.index("-o") + 1])
+            output.write_bytes(content[output.parent.name])
+
+        with mock.patch.object(mihomo_build, "ROOT", self.root), \
+                mock.patch.object(mihomo_build, "source_tree", return_value=self.root), \
+                mock.patch.object(mihomo_build.dev, "environment", return_value={"ANDROID_NDK_HOME": str(self.root / "ndk")}), \
+                mock.patch.object(mihomo_build.dev, "run", side_effect=simulate_go), \
+                mock.patch.object(mihomo_build.shutil, "copyfile", side_effect=AssertionError("Unchanged core was rewritten")), \
+                contextlib.redirect_stdout(io.StringIO()):
+            mihomo_build.build()
+        for item in self.spec["cores"]:
+            path = mihomo.core_path(item)
+            self.assertEqual(path.stat().st_mtime_ns, timestamps[item["abi"]])
+            self.assertEqual(path.read_bytes(), content[item["abi"]])
+
+    def test_apk_checks_embedded_rules_and_every_packaged_notice(self):
+        geo = self.root / "resources/geodata/manifest.json"
+        geo.parent.mkdir(parents=True)
+        geo.write_text('{"files":[]}', encoding="utf-8")
+        rule = self.root / "engine/internal/config/presets/data/process-direct-android.yaml"
+        rule.parent.mkdir(parents=True)
+        rule.write_bytes(b"payload:\n  - PROCESS-NAME,com.example.app\n")
+        (self.notices / "BUILTIN_RULES_NOTICE.txt").write_bytes(b"required notice")
+        native = (self.resources / "jniLibs/x86_64/libmihomo_exec.so").read_bytes()
+        entries = {"assets/" + path.name: path.read_bytes() for path in self.notices.iterdir()}
+        entries.update({"assets/geodata/manifest.json": geo.read_bytes(), "lib/x86_64/libmihomo_exec.so": native,
+                        "lib/x86_64/libgojni.so": native + rule.read_bytes()})
+        apk = self.root / "rules.apk"
+        with mock.patch.object(dev, "sdk_path", return_value=Path("sdk")), \
+                mock.patch.object(dev, "run", return_value=SimpleNamespace(stdout="zh-rCN sdkVersion:'26' targetSdkVersion:'36'")), \
+                contextlib.redirect_stdout(io.StringIO()):
+            for failure in (None, "rule", "notice"):
+                with self.subTest(failure=failure):
+                    current = dict(entries)
+                    if failure == "rule":
+                        current["lib/x86_64/libgojni.so"] = native + b"old routing rules"
+                    if failure == "notice":
+                        del current["assets/BUILTIN_RULES_NOTICE.txt"]
+                    with zipfile.ZipFile(apk, "w") as archive:
+                        for name, data in current.items():
+                            archive.writestr(name, data)
+                    if failure is None:
+                        dev.verify_apk(apk, "x86_64")
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, "routing resource|notice"):
+                            dev.verify_apk(apk, "x86_64")
+
 
 if __name__ == "__main__":
     unittest.main()

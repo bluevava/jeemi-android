@@ -5,16 +5,19 @@ import "strings"
 const defaultSelectorTestURL = "http://www.google.com/generate_204"
 
 var selectorEmojiValues = []string{
+	"🚀", "🌐", "⚡", "🛡️", "🔒", "🤖", "🔍", "📱", "💻", "☁️", "🏠",
+	"✈️", "🎬", "🎵", "💬", "📷", "🎮", "🎧", "📺", "🍎", "🎯",
+	"⭐", "🔥", "💎", "🌟", "🌈", "🍀", "🍉", "🍭", "🎲", "🚢", "🏎️", "🛰️",
 	"🐱", "🐶", "🐕", "🐩", "🐈", "🦊", "🐼", "🐯", "🐰", "🐇",
 	"🐻", "🦁", "🐸", "🐧", "🐣", "🐤", "🐥", "🐔", "🦆", "🦅",
 	"🦉", "🦜", "🦢", "🦩", "🦄", "🐳", "🐬", "🦭", "🐟", "🐠",
 	"🦈", "🐙", "🦑", "🦀", "🦞", "🐢", "🐨", "🐮", "🐷", "🐵",
 	"🐹", "🐭", "🐺", "🦝", "🐴", "🦓", "🦒", "🐘", "🦏", "🦛",
 	"🐑", "🐐", "🦌", "🐿️", "🦔", "🦦", "🦥", "🦋", "🐝", "🦖", "🐲",
-	"🚀", "⚡", "🌐", "🛡️", "🔒", "🎮", "🎬", "🎵", "💬", "💻",
-	"📱", "☁️", "🏠", "⭐", "🔥", "💎", "🌟", "🌈", "🍀", "🍉",
-	"🍎", "🍭", "🎯", "🎲", "🎧", "📺", "✈️", "🚢", "🏎️", "🛰️",
 }
+
+// EmojiChoices returns a copy of the catalog shared by Android resource editors.
+func EmojiChoices() []string { return append([]string(nil), selectorEmojiValues...) }
 
 var selectorEmojiSet = func() map[string]struct{} {
 	result := make(map[string]struct{}, len(selectorEmojiValues))

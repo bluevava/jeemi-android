@@ -46,7 +46,7 @@ class WorkspaceUiTest {
         compose.onAllNodesWithContentDescription(text(R.string.subscription_shelf))[0].performClick()
         compose.onNodeWithContentDescription(text(R.string.more_actions)).assertIsDisplayed()
         clickLabel(R.string.configuration)
-        clickLabel(R.string.new_resource)
+        compose.onNodeWithTag("resource-create").performClick()
         compose.onNode(hasText(text(R.string.name)) and hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("Local sniffer")
         compose.onNodeWithTag("field-tree-search").performScrollTo().performTextInput("/sniffer/enable")
         compose.onNodeWithTag("field-toggle-/sniffer/enable").performScrollTo().performClick()

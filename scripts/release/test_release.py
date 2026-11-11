@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -188,6 +189,28 @@ class FakeGitHub:
 
 
 class PublicationTests(TemporaryTests):
+    def test_download_table_uses_versioned_assets_and_markdown_links(self):
+        table = common.download_table(METADATA["tag"])
+        self.assertEqual(len(table.splitlines()), 4)
+        self.assertEqual(table.count("[![下载 "), 2)
+        for architecture in common.ARCHITECTURES:
+            name = common.apk_name(METADATA["tag"], architecture)
+            self.assertIn(f"/releases/download/{METADATA['tag']}/{name})", table)
+            self.assertIn(f"/{name}.sha256)", table)
+        self.assertIn("x86__64_APK", table)
+        self.assertNotIn("latest/download", table)
+        with self.assertRaises(ValueError):
+            common.download_table("../unpublished")
+
+    def test_readme_download_table_matches_the_release_renderer(self):
+        path = common.ROOT / "public/README.md"
+        if not path.exists():
+            path = common.ROOT / "README.md"
+        text = path.read_text(encoding="utf-8")
+        table = text.split("<!-- android-downloads:start -->\n", 1)[1].split("<!-- android-downloads:end -->", 1)[0]
+        tag = re.search(r"/releases/tag/(v\d+\.\d+\.\d+)\)", table).group(1)
+        self.assertEqual(table, common.download_table(tag))
+
     def test_release_lookup_finds_draft_missing_from_tag_endpoint(self):
         api = FakeGitHub({"draft": True, "assets": []}, COMMIT)
         self.assertEqual(workflow.release_state(api, METADATA["tag"]), api.state)
@@ -239,6 +262,8 @@ class PublicationTests(TemporaryTests):
                                      "digest": "sha256:" + common.digest(path)} for path in self.directory.iterdir()]
         self.publish_with(api, upload)
         self.assertFalse(api.state["draft"])
+        for architecture in common.ARCHITECTURES:
+            self.assertIn(common.apk_name(METADATA["tag"], architecture) + ")", api.state["body"])
         self.assertEqual(api.writes[-1][1], "PATCH")
         self.assertIn("/releases/1", api.reads)
         for failure in ("missing", "digest", "upload"):
@@ -264,7 +289,8 @@ class PublicationTests(TemporaryTests):
                                      "digest": "sha256:" + common.digest(path)} for path in self.directory.iterdir()]
         self.publish_with(api, upload)
         self.assertFalse(api.state["draft"])
-        self.assertEqual(api.writes, [("/releases/1", "PATCH", {"body": "Notes\n", "draft": False, "make_latest": "true"})])
+        body = "## 安卓安装包下载\n\n" + common.download_table(METADATA["tag"]) + "\nNotes\n"
+        self.assertEqual(api.writes, [("/releases/1", "PATCH", {"body": body, "draft": False, "make_latest": "true"})])
 
     def test_publication_stops_if_uploaded_draft_identity_or_tag_changes(self):
         self.bundle()

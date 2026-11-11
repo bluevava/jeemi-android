@@ -16,11 +16,16 @@ func validateState(groups []StrategyGroup, ruleSets []RuleSet) error {
 			return fmt.Errorf("stored strategy group id is duplicated")
 		}
 		seen["group-id:"+item.ID] = struct{}{}
-		displayName := strategyGroupDisplayName(item)
-		if _, duplicate := seen["group-name:"+displayName]; duplicate {
-			return fmt.Errorf("stored strategy group name is duplicated")
+		names := []string{strategyGroupDisplayName(item)}
+		if item.Kind == StrategyGroupKindSelector && item.Type == "select" && item.AutoSelect {
+			names = append(names, names[0]+" Auto")
 		}
-		seen["group-name:"+displayName] = struct{}{}
+		for _, name := range names {
+			if _, duplicate := seen["group-name:"+name]; duplicate {
+				return fmt.Errorf("stored strategy group name is duplicated")
+			}
+			seen["group-name:"+name] = struct{}{}
+		}
 		updatedAt, updatedErr := time.Parse(time.RFC3339Nano, item.UpdatedAt)
 		if updatedErr != nil {
 			return fmt.Errorf("stored strategy group %q update time is invalid", item.Name)

@@ -2,7 +2,7 @@
 
 一个基于 mihomo 的开源 Android VPN 客户端，使用 Kotlin、Compose 与 Go，支持 Android 8.0（API 26）及以上的手机和平板。安卓原生界面，耗电低！不同订阅关联不同(相同)本地脚本、规则配置、链式代理关联方式，高灵活度实现自定义订阅配置。
 
-支持规则/远程节点与策略组图片的持久缓存、首页本地 zashboard 面板入口、脚本 URL 导入/刷新，以及嵌套选择器逐层浏览与最终出口节点。运行中配置修改仍待重启生效。
+支持规则/远程节点与策略组图片的持久缓存、首页本地 zashboard 面板入口、脚本 URL 导入/刷新，以及嵌套选择器逐层浏览与最终出口节点。运行中保存配置自动应用，系统通道参数变化时自动重建。
 
 ## 官方交流与公告
 
@@ -11,10 +11,18 @@
 
 ## 下载
 
-在 [GitHub Releases](https://github.com/bluevava/jeemi-android/releases) 下载对应架构的 APK：
+[![最新正式版](https://img.shields.io/badge/Release-最新正式版-8A2BE2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/bluevava/jeemi-android/releases/latest) · [全部版本](https://github.com/bluevava/jeemi-android/releases)
 
-- `Jeemi-Android-v版本号-arm64.apk`：ARM64 手机和平板。
-- `Jeemi-Android-v版本号-amd64.apk`：x86_64 设备或模拟器。
+点击下表徽章可直接下载已发布的安装包；大多数 Android 手机和平板请选择 **ARM64**。
+
+<!-- android-downloads:start -->
+| 版本 | 适用设备 | APK 下载 | 校验 |
+| --- | --- | --- | --- |
+| [v0.1.5](https://github.com/bluevava/jeemi-android/releases/tag/v0.1.5) | ARM64 手机 / 平板 | [![下载 arm64 APK](https://img.shields.io/badge/Android-ARM64_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/bluevava/jeemi-android/releases/download/v0.1.5/Jeemi-Android-v0.1.5-arm64.apk) | [SHA-256](https://github.com/bluevava/jeemi-android/releases/download/v0.1.5/Jeemi-Android-v0.1.5-arm64.apk.sha256) |
+| [v0.1.5](https://github.com/bluevava/jeemi-android/releases/tag/v0.1.5) | x86_64 设备 / 模拟器 | [![下载 amd64 APK](https://img.shields.io/badge/Android-x86__64_APK-0078D6?style=for-the-badge&logo=android&logoColor=white)](https://github.com/bluevava/jeemi-android/releases/download/v0.1.5/Jeemi-Android-v0.1.5-amd64.apk) | [SHA-256](https://github.com/bluevava/jeemi-android/releases/download/v0.1.5/Jeemi-Android-v0.1.5-amd64.apk.sha256) |
+<!-- android-downloads:end -->
+
+[查看此版本完整校验清单](https://github.com/bluevava/jeemi-android/releases/download/v0.1.5/SHA256SUMS) · [发布元数据](https://github.com/bluevava/jeemi-android/releases/download/v0.1.5/release.json)
 
 没有通用包或 32 位包。正式发布使用同一自签名证书，附每包 SHA-256、`SHA256SUMS` 和包含证书指纹、公开源码提交的 `release.json`。安装时允许所用下载应用安装 APK；VPN 连接另由 Android 系统授权。
 
@@ -28,13 +36,15 @@
 - 连接列表和详情、日志、DNS 查询；应用规则使用 Android 包名。
 - 简体中文和英文、浅色和深色主题，手机和平板均采用竖屏单列布局。
 
-内置 `v1.19.32-jeemi.3` 核心基于官方 mihomo v1.19.32，增加 Android VpnService FD 与应用归属桥接；两种架构携带同一固定 GEO 快照。核心来源、补丁、归档、哈希和上游许可证保留在 `resources/`。
+内置 `v1.19.33-jeemi.1` 核心基于官方 mihomo v1.19.33，保留 Android VpnService FD、应用归属桥接与出站套接字保护；两种架构携带相同的 2026-11-11 GEO 快照。核心来源、补丁、归档、哈希和上游许可证保留在 `resources/`。
 
-当前设备验证主要来自 Android 16 x86_64 模拟器；ARM64 真机、API 26、16 KB 页设备和厂商后台策略仍需覆盖。曾观察到模拟器 ART 原生崩溃，Compose 固定版本不代表该问题已解决。自动订阅调度尚未实现。
+订阅自动更新仅在 Jeemi 界面前台可见时检查；退到后台或划掉界面后暂停下载及节点列表轮询，已运行的代理继续工作，返回界面再补一次到期更新。
+
+当前设备验证主要来自 Android 16 x86_64 模拟器；ARM64 真机、API 26、16 KB 页设备和厂商后台策略仍需覆盖。曾观察到模拟器 ART 原生崩溃，Compose 固定版本不代表该问题已解决。功能说明对应当前源码，已发布安装包的变更以相应 Release 为准。
 
 ## 界面预览（v0.1.5 开发版）
 
-以下为 **v0.1.5 开发版**的实际界面。当前 v0.1.4 正式版尚未包含这套内置分流方案；图片使用演示订阅与连接数据。
+以下为 **v0.1.5 开发版**的实际界面，图片使用演示订阅与连接数据。
 
 <p>
   <img src="assets/images/app-routing/00-home.png" alt="Jeemi 主页：运行控制、模式、协议栈与主题" width="230">

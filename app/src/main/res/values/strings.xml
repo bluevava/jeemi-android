@@ -147,7 +147,7 @@
     <string name="concurrent_tcp">Concurrent TCP</string>
     <string name="unified_delay">Unified delay</string>
     <string name="core_management">Built-in core</string>
-    <string name="core_bundled_version">mihomo v1.19.32-jeemi.3 · built in</string>
+    <string name="core_bundled_version">mihomo v1.19.33-jeemi.1 · built in</string>
     <string name="export_error">Unable to write the selected document. Choose a writable location.</string>
     <string name="resource_error">Check the resource name, YAML or script contract and composition strategy. Your draft has been retained.</string>
     <string name="network_error">The network operation failed. Check the address and current connection.</string>

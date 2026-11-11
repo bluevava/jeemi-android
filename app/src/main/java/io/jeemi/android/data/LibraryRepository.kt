@@ -16,8 +16,11 @@ import java.io.File
 // whole selection/metadata change; a failed write must not replace live state.
 class LibraryRepository(directory: File) {
     private val file = AtomicFile(File(directory, "library-v1.json"))
+    internal val mutations = kotlinx.coroutines.sync.Mutex()
+    private val mutableRevision = kotlinx.coroutines.flow.MutableStateFlow(0L)
+    internal val revision: kotlinx.coroutines.flow.StateFlow<Long> = mutableRevision
 
-    fun load(): Library {
+    @Synchronized fun load(): Library {
         if (!file.baseFile.exists() && !File(file.baseFile.path + ".bak").exists()) return Library()
         val json = JSONObject(file.openRead().use { input ->
             val bytes = input.readBounded(MAX_LIBRARY_BYTES)
@@ -65,7 +68,10 @@ class LibraryRepository(directory: File) {
         return library
     }
 
-    fun save(library: Library) {
+    @Synchronized fun save(library: Library) {
+        library.subscriptions.forEach {
+            require(it.autoUpdateIntervalMinutes == null || it.autoUpdateIntervalMinutes == it.updateIntervalMinutes)
+        }
         val preferences = library.preferences
         val json = JSONObject().put("schemaVersion", 5).put("selectedId", library.selectedId ?: "")
             .put("bundledRoutingVersion", library.bundledRoutingVersion)
@@ -93,6 +99,7 @@ class LibraryRepository(directory: File) {
         try {
             stream.write(bytes)
             file.finishWrite(stream)
+            mutableRevision.value += 1
         } catch (failure: Exception) {
             file.failWrite(stream)
             throw failure
@@ -108,6 +115,7 @@ class LibraryRepository(directory: File) {
         .put("selections", JSONObject(item.selections))
         .put("normalizationVersion", item.normalizationVersion).put("normalizationReport", item.normalizationReport)
         .put("chainGroupIds", JSONArray(item.chainGroupIds)).put("chainRevision", item.chainRevision)
+        .put("autoUpdateIntervalMinutes", item.autoUpdateIntervalMinutes)
         .put("iconImage", item.iconImage).put("ruleProviderCount", item.ruleProviderCount)
         .put("disabledProviders", JSONArray(item.disabledProviders))
         .put("uploadedBytes", item.uploadedBytes).put("downloadedBytes", item.downloadedBytes)
@@ -131,7 +139,12 @@ class LibraryRepository(directory: File) {
             selections = item.optJSONObject("selections")?.let { choices -> choices.keys().asSequence().associateWith { choices.getString(it) } } ?: emptyMap(),
             iconImage = item.optString("iconImage"), ruleProviderCount = item.optInt("ruleProviderCount"),
             normalizationVersion = item.optInt("normalizationVersion"), normalizationReport = item.optString("normalizationReport"),
-            chainGroupIds = item.optJSONArray("chainGroupIds").strings(), chainRevision = item.optInt("chainRevision"))
+            chainGroupIds = item.optJSONArray("chainGroupIds").strings(), chainRevision = item.optInt("chainRevision"),
+            autoUpdateIntervalMinutes = if (item.has("autoUpdateIntervalMinutes")) {
+                val minutes = item.get("autoUpdateIntervalMinutes")
+                require(minutes is Int && minutes == subscriptionUpdateInterval(item.optString("sourceUrl"), minutes))
+                minutes
+            } else null)
     }
 
     companion object { const val MAX_LIBRARY_BYTES = 32 * 1024 * 1024 }

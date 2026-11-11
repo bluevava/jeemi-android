@@ -45,7 +45,8 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
     val updateState = rememberAppUpdate(model.appUpdater)
     val runtime by model.runtime.collectAsStateWithLifecycle()
     val live by model.live.collectAsStateWithLifecycle()
-    val active = runtime is RuntimeState.Running || runtime == RuntimeState.Starting || runtime == RuntimeState.Restarting
+    val updateFailed by model.runtimeUpdateFailed.collectAsStateWithLifecycle()
+    val active = runtime is RuntimeState.Running || runtime == RuntimeState.Starting || runtime == RuntimeState.Restarting || runtime == RuntimeState.Updating
     val selected = state.library.selected
     val subscriptionAction = stringResource(if (selected == null) R.string.add_subscription else R.string.manage_subscriptions)
     val switchAction = stringResource(if (active) R.string.vpn_stop else R.string.vpn_start)
@@ -79,6 +80,7 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
                         RuntimeState.Stopped -> R.string.runtime_stopped
                         RuntimeState.Starting -> R.string.runtime_starting
                         RuntimeState.Restarting -> R.string.runtime_restarting
+                        RuntimeState.Updating -> R.string.runtime_updating
                         RuntimeState.Stopping -> R.string.runtime_stopping
                         is RuntimeState.Running -> R.string.runtime_running
                     }), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -87,9 +89,13 @@ fun HomeScreen(state: AppState, model: JeemiViewModel, modifier: Modifier, autho
                             (active || (!state.busy && state.candidate != null && !state.projectionFailed)),
                         modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).semantics { contentDescription = switchAction })
                 }
-                if (runtime is RuntimeState.Running && live?.let { it.profileId != state.library.selectedId ||
+                if (runtime is RuntimeState.Running && updateFailed)
+                    Text(stringResource(R.string.runtime_update_failed), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                else if (runtime is RuntimeState.Running && live?.let { it.profileId != state.library.selectedId ||
                     it.revision != state.candidate?.revision || it.geoRevision != state.geoRevision } == true)
-                    Text(stringResource(R.string.pending_restart), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(if (live?.profileId != state.library.selectedId || live?.revision != state.candidate?.revision)
+                        R.string.configuration_pending else R.string.pending_restart),
+                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 SegmentedChoice(modeLabel, state.library.preferences.mode.name,
                     ProxyMode.entries.map { it.name to stringResource(it.label) }, enabled = !state.busy, showLabel = false) {
                     model.savePreferences(state.library.preferences.copy(mode = ProxyMode.valueOf(it)))

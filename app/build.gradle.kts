@@ -5,8 +5,8 @@ plugins {
 }
 
 // 应用版本：每次发布更新版本名称，并递增内部版本编号。
-val appVersionName = "0.1.5"
-val appVersionCode = 6
+val appVersionName = "0.1.6"
+val appVersionCode = 7
 
 val buildEngine by tasks.registering(Exec::class) {
     group = "build"
@@ -21,6 +21,7 @@ val buildEngine by tasks.registering(Exec::class) {
         exclude("build/**")
     })
     inputs.files(rootDir.resolve("scripts/dev.py"), rootDir.resolve("scripts/toolchain.json"))
+    inputs.dir(rootDir.resolve("engine/internal/config/presets/data"))
     outputs.file(rootDir.resolve("engine/build/jeemi-engine.aar"))
 }
 
@@ -94,6 +95,19 @@ android {
 }
 kotlin { jvmToolchain(21) }
 kotlin.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+
+tasks.withType<Test>().configureEach {
+    maxParallelForks = 1
+    minHeapSize = "64m"
+    maxHeapSize = "512m"
+    val crashDir = rootDir.resolve("temp/jvm-crashes")
+    jvmArgs("-XX:ActiveProcessorCount=2",
+        "-XX:ErrorFile=${crashDir.resolve("hs_err_pid%p.log").absolutePath}",
+        "-XX:HeapDumpPath=${crashDir.absolutePath}")
+    doFirst {
+        check(crashDir.isDirectory || crashDir.mkdirs()) { "Cannot create JVM diagnostics directory: $crashDir" }
+    }
+}
 
 dependencies {
     implementation(files(rootDir.resolve("engine/build/jeemi-engine.aar")).builtBy(buildEngine))

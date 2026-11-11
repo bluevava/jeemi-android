@@ -275,6 +275,23 @@ func proxiesFromRoot(root *yaml.Node) ([]proxyRecord, error) {
 
 func materializeSelectors(ids []string, available map[string]StrategyGroup, proxies []proxyRecord, root *yaml.Node) (*yaml.Node, error) {
 	sequence := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+	names := make(map[string]bool)
+	for _, proxy := range proxies {
+		names[proxy.Name] = true
+	}
+	for _, id := range ids {
+		group := available[id]
+		generated := []string{strategyGroupDisplayName(group)}
+		if group.AutoSelect {
+			generated = append(generated, generated[0]+" Auto")
+		}
+		for _, name := range generated {
+			if names[name] {
+				return nil, fmt.Errorf("local selector name conflicts with a node or selector")
+			}
+			names[name] = true
+		}
+	}
 	for _, id := range ids {
 		group, found := available[id]
 		if !found || group.Kind != StrategyGroupKindSelector {
@@ -319,6 +336,30 @@ func materializeSelectors(ids []string, available map[string]StrategyGroup, prox
 				setScalar(mapping, "strategy", group.Strategy)
 			}
 			setBool(mapping, "lazy", group.Lazy)
+		}
+		if group.AutoSelect {
+			// A generated companion shares the exact node/provider scope, but
+			// owns no rules. Routing and manual preferences keep the parent name.
+			auto := document.Clone(mapping)
+			_ = document.DeleteMappingPath(auto, "/name")
+			_ = document.DeleteMappingPath(auto, "/type")
+			autoName := strategyGroupDisplayName(group) + " Auto"
+			setScalar(auto, "name", autoName)
+			setScalar(auto, "type", "url-test")
+			setBool(auto, "hidden", true)
+			setScalar(auto, "url", group.URL)
+			setInt(auto, "interval", group.Interval)
+			setInt(auto, "tolerance", group.Tolerance)
+			setBool(auto, "lazy", group.Lazy)
+			_, hasProviders, _ := document.Find(auto, "/use")
+			if len(members) == 0 && !hasProviders {
+				_ = document.DeleteMappingPath(auto, "/proxies")
+				setStringSequence(auto, "proxies", []string{"REJECT"})
+			}
+			_ = document.DeleteMappingPath(mapping, "/proxies")
+			setStringSequence(mapping, "proxies", append([]string{autoName}, members...))
+			setScalar(mapping, "default-selected", autoName)
+			sequence.Content = append(sequence.Content, auto)
 		}
 		sequence.Content = append(sequence.Content, mapping)
 	}

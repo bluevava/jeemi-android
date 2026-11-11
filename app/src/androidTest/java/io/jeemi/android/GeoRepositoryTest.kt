@@ -9,8 +9,40 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.security.MessageDigest
 import java.util.UUID
+import org.json.JSONArray
 
 class GeoRepositoryTest {
+    @Test fun bundledSelectionsFollowTheApkSnapshotAndUserAssetsStayPinned() {
+        val app = ApplicationProvider.getApplicationContext<JeemiApplication>()
+        val directory = File(app.cacheDir, "geo-upgrade-${UUID.randomUUID()}").apply { mkdirs() }
+        val isolated = object : ContextWrapper(app) { override fun getNoBackupFilesDir() = directory }
+        val repository = GeoRepository(isolated)
+        try {
+            val bundled = repository.assets()
+            repository.restore()
+            val site = bundled.single { it.kind == "geosite" }
+            app.assets.open("geodata/${site.file}").use { repository.install(site.kind, it, "import", site.sha256, site.bytes) }
+            val custom = repository.assets().single { it.kind == site.kind }
+            val file = File(directory, "geodata/selection.json")
+            val old = JSONArray(file.readText())
+            repeat(old.length()) { index ->
+                old.getJSONObject(index).takeIf { it.getString("source") == "bundled" }?.apply {
+                    put("sha256", "0".repeat(64)); put("bytes", 1); put("date", "old-apk-snapshot")
+                }
+            }
+            file.writeText(old.toString())
+            val stored = file.readText()
+            val expected = bundled.map { if (it.kind == site.kind) custom else it }
+            assertEquals(expected, repository.assets())
+            assertEquals(stored, file.readText()) // Reading never replaces the custom selection file.
+            val session = File(directory, "session")
+            assertEquals(expected.joinToString(":") { it.sha256 }, repository.materialize(session))
+            expected.forEach { assertEquals(it.sha256, sha(File(session, it.file))) }
+        } finally {
+            check(directory.canonicalFile.parentFile == app.cacheDir.canonicalFile)
+            directory.deleteRecursively()
+        }
+    }
     @Test fun coreValidatesBundledFormatsAndInvalidReplacementPreservesSelectionAndActiveFiles() {
         val app = ApplicationProvider.getApplicationContext<JeemiApplication>()
         val directory = File(app.cacheDir, "geo-test-" + UUID.randomUUID()).apply { mkdirs() }

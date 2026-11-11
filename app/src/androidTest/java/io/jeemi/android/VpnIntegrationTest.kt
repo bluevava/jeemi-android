@@ -41,7 +41,9 @@ class VpnIntegrationTest {
     @Test fun systemStackCarriesSeparateUidTcpAndDns() = runVpn(ProxyMode.RULE, TunStack.SYSTEM)
     @Test fun gvisorStackCarriesSeparateUidTcpAndDns() = runVpn(ProxyMode.RULE, TunStack.GVISOR)
     @Test fun mixedStackCarriesSeparateUidTcpAndDns() = runVpn(ProxyMode.RULE, TunStack.MIXED)
-    private fun runVpn(mode: ProxyMode, stack: TunStack = TunStack.MIPS) {
+    @Test fun removedTaskKeepsMipsTunnelUntilNotificationStop() = runVpn(ProxyMode.RULE, removeTask = true)
+    @Test fun removedTaskKeepsSystemTunnelUntilNotificationStop() = runVpn(ProxyMode.RULE, TunStack.SYSTEM, removeTask = true)
+    private fun runVpn(mode: ProxyMode, stack: TunStack = TunStack.MIPS, removeTask: Boolean = false) {
         lateinit var activity: MainActivity
         activityRule.scenario.onActivity { activity = it }
         val app = activity.application as JeemiApplication
@@ -54,6 +56,7 @@ class VpnIntegrationTest {
         val close = AtomicBoolean(false)
         val sockets = java.util.concurrent.ConcurrentHashMap.newKeySet<java.net.Socket>()
         val traces = java.util.concurrent.CopyOnWriteArrayList<String>()
+        var removedTask: VpnTaskRemovalProbe? = null
         var logConnection: java.net.HttpURLConnection? = null
         val proxy = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1")).apply { soTimeout = 1000 }
         val worker = thread {
@@ -173,8 +176,15 @@ class VpnIntegrationTest {
             diagnosticScope.launch { diagnostic.observeLogs("debug") }
             Thread.sleep(200)
             assertNotEquals(app.applicationInfo.uid, app.packageManager.getApplicationInfo(testPackage, 0).uid)
-            activityRule.scenario.onActivity { host ->
-                host.startActivity(Intent().setComponent(ComponentName(testPackage, "io.jeemi.android.testprobe.TrafficProbeActivity"))
+            if (removeTask) {
+                removedTask = VpnTaskRemovalProbe(app)
+                removedTask.remove(activity)
+            }
+            instrumentation.runOnMainSync {
+                // Each probe needs a new Activity/request, even after the prior
+                // test left the separate APK's task in Recents.
+                app.startActivity(Intent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    .setComponent(ComponentName(testPackage, "io.jeemi.android.testprobe.TrafficProbeActivity"))
                     .putExtra("url", "http://vpn-test.invalid/jeemi-vpn-probe"))
             }
             assertTrue("Separate UID traffic did not reach the mihomo-selected proxy", observed.await(20, TimeUnit.SECONDS))
@@ -197,6 +207,7 @@ class VpnIntegrationTest {
             assertEquals("203.0.113.7", records.getJSONObject(0).getJSONArray("addresses").getString(0))
             assertEquals("2001:db8::7", records.getJSONObject(1).getJSONArray("addresses").getString(0))
             assertEquals("Loopback test proxy", app.runtime.live.value?.proxies?.get(selector)?.now)
+            removedTask?.verifyReturnAndStop()
         } finally {
             inspected.countDown()
             diagnostic.cancelDns(); diagnosticScope.cancel()
@@ -205,6 +216,7 @@ class VpnIntegrationTest {
             sockets.forEach { runCatching { it.close() } }
             app.runtime.stop()
             eventually { app.runtime.state.value == RuntimeState.Stopped || app.runtime.state.value is RuntimeState.Failed }
+            removedTask?.close()
             close.set(true); proxy.close(); worker.join(2000)
         }
         assertNull(app.runtime.live.value)

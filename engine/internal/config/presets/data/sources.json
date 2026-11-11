@@ -1,0 +1,98 @@
+{
+  "repository": "MetaCubeX/meta-rules-dat",
+  "revision": "1fc5de325d54d3b77d6b86a1db900c5e48ae1003",
+  "snapshotDate": "2026-11-06",
+  "license": "GPL-3.0",
+  "files": [
+    {
+      "file": "ai.list",
+      "path": "geo/geosite/category-ai-!cn.list",
+      "sha256": "c83107db044f54980cbaecccfa4042b680cbada46c65abf6656fbbeaae086399",
+      "bytes": 4093
+    },
+    {
+      "file": "telegram-domain.list",
+      "path": "geo/geosite/telegram.list",
+      "sha256": "2448b2699519cd258b10232fcacd01e89b7db04c8ce7fc860a4962518370a329",
+      "bytes": 293
+    },
+    {
+      "file": "instagram.list",
+      "path": "geo/geosite/instagram.list",
+      "sha256": "e5cba6ce4fa5a0dddbd4710d9dd5b6693c249e6f5be4179401843109ecbca228",
+      "bytes": 1447
+    },
+    {
+      "file": "youtube.list",
+      "path": "geo/geosite/youtube.list",
+      "sha256": "e95f241fa4357918fc1066390c352aad750b571ddea15e3421d30c84e947ac10",
+      "bytes": 2743
+    },
+    {
+      "file": "netflix-domain.list",
+      "path": "geo/geosite/netflix.list",
+      "sha256": "aa3e83152b51840332440177399fcae048733419f4dde7a65383757beedf369a",
+      "bytes": 454
+    },
+    {
+      "file": "telegram-ip.list",
+      "path": "geo/geoip/telegram.list",
+      "sha256": "b0a0a5a4280f2c713a26bf1763317be5aefeda02e4e78dab7c2efbda02663181",
+      "bytes": 192
+    },
+    {
+      "file": "netflix-ip.list",
+      "path": "geo/geoip/netflix.list",
+      "sha256": "21b6ddeeac461f72bd0097e203d82916b38da6b53dce0cc768d7e4386a8baad0",
+      "bytes": 2244
+    },
+    {
+      "file": "google.list",
+      "path": "geo/geosite/google.list",
+      "sha256": "ce967150c0ab46b1c501dd11fff1dd8457a3091ec128185f50388938f5545905",
+      "bytes": 18475
+    },
+    {
+      "file": "discord.list",
+      "path": "geo/geosite/discord.list",
+      "sha256": "9f2530e2dc4117a27851256d731908931064bc6c9fefe43f69cc164804a33456",
+      "bytes": 542
+    },
+    {
+      "file": "whatsapp.list",
+      "path": "geo/geosite/whatsapp.list",
+      "sha256": "d97d285eca5954927dd0c797b2625662743c212259d7c6384cd3e683b96d77c6",
+      "bytes": 176
+    },
+    {
+      "file": "line.list",
+      "path": "geo/geosite/line.list",
+      "sha256": "d186050204edc162d7f460ec76083f37e6b80131a143eb0f639fa0a219d43361",
+      "bytes": 315
+    },
+    {
+      "file": "spotify.list",
+      "path": "geo/geosite/spotify.list",
+      "sha256": "cc8ae18677b29c1b741ab47332f3696defe9b059d9a9a8763d7bcb5e28a53076",
+      "bytes": 624
+    },
+    {
+      "file": "twitter.list",
+      "path": "geo/geosite/twitter.list",
+      "sha256": "7bc17d19d2fa089b36993e56275eb0eb7355963f3e90a711364086442fd369c0",
+      "bytes": 369
+    },
+    {
+      "file": "github.list",
+      "path": "geo/geosite/github.list",
+      "sha256": "e1f8c98a265ce67ffaddded86e71d0d76595212eb4f331eb2d2e52e52d07beda",
+      "bytes": 1942
+    },
+    {
+      "file": "apple.list",
+      "path": "geo/geosite/apple.list",
+      "sha256": "3e690d7b74274a1d4dac4c66e38c8e5ee3ae1df991c9db6ed5e904f08eb9bce8",
+      "bytes": 36906
+    }
+  ]
+}

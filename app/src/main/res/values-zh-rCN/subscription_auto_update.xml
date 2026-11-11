@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subscription_update_interval">定时更新间隔</string>
+    <string name="subscription_update_10m">10分钟</string>
+    <string name="subscription_update_30m">30分钟</string>
+    <string name="subscription_update_1h">1小时</string>
+    <string name="subscription_update_3h">3小时</string>
+    <string name="subscription_update_12h">12小时</string>
+    <string name="subscription_update_failed">自动更新失败</string>
+    <string name="subscription_update_invalid">自动更新校验失败</string>
+    <string name="subscription_changed">订阅在编辑期间已发生变化，请重新打开后再保存。</string>
+    <string name="subscription_update_purpose">按间隔拉取当前选中的链接订阅，可选10分钟、30分钟、1小时、3小时、12小时，默认1小时。仅粘贴文本且没有链接的订阅不自动更新。</string>
+    <string name="subscription_update_scenarios">仅在 Jeemi 界面前台可见时检查。退到后台、锁屏或划掉界面后暂停自动更新，已运行的代理继续工作。从上次成功拉取计时，手动刷新成功后重新计时；返回界面或切换订阅后，已到期的补拉取一次。只改间隔不会下载正文或重置成功时间。</string>
+    <string name="subscription_update_cautions">编辑订阅期间暂缓；界面隐藏时取消未完成的自动下载，不因 VPN 运行而在后台拉取。系统休眠、进程终止和厂商限制可能延后执行，不保证准点。服务端建议不覆盖此设置。下载或校验失败保留旧内容与关联，等下个间隔重试。成功后自动应用到运行代理；热更新失败尝试恢复原配置并显示状态，可修正后保存或主动重启。VPN 已停止时不会自动启动。</string>
+</resources>

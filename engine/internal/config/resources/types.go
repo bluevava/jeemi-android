@@ -49,7 +49,7 @@ type StrategyGroup struct {
 
 	// Selector-only fields.
 	Type                string     `json:"type"`
-	Emoji               string     `json:"emoji"`
+	Emoji               string     `json:"emoji"` // Shared display metadata, also retained by logical rule groups.
 	Icon                string     `json:"icon"`
 	URL                 string     `json:"url"`
 	Interval            int        `json:"interval"`
@@ -58,6 +58,7 @@ type StrategyGroup struct {
 	Lazy                bool       `json:"lazy"`
 	Filter              NodeFilter `json:"filter"`
 	IncludeAllProviders bool       `json:"includeAllProviders,omitempty"`
+	AutoSelect          bool       `json:"autoSelect,omitempty"`
 
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
@@ -66,6 +67,7 @@ type StrategyGroup struct {
 type RuleSet struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
+	Emoji       string   `json:"emoji,omitempty"`
 	Description string   `json:"description"`
 	SourceType  string   `json:"sourceType"`
 	Behavior    string   `json:"behavior"`

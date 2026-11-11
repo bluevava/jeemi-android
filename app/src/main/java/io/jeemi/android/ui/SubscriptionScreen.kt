@@ -48,6 +48,7 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
     val preferences = state.library.preferences
     val live by model.live.collectAsState()
     val runtime by model.runtime.collectAsState()
+    val updateErrors by model.subscriptionUpdateErrors.collectAsState()
     val matching = runtime is RuntimeState.Running && live?.let { it.profileId == selected?.id &&
         it.revision == state.candidate?.revision && it.geoRevision == state.geoRevision } == true
     val groups = remember(state.structure.groups, matching, live?.proxies) {
@@ -137,6 +138,7 @@ fun SubscriptionScreen(state: AppState, model: JeemiViewModel, modifier: Modifie
                                     var menu by remember { mutableStateOf(false) }
                                     SubscriptionEntry(subscription, subscription.id == state.library.selectedId,
                                         state.busy || state.chainBusy || state.resourceDownloading, now,
+                                        updateError = updateErrors[subscription.id],
                                         select = { model.select(subscription.id) }, refresh = { model.refresh(subscription.id) },
                                         bindings = {
                                             SubscriptionBindings(subscription, state.library.resources.firstOrNull { it.id == subscription.handlerId },
